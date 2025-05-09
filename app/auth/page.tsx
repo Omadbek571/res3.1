@@ -175,22 +175,22 @@ export default function AuthPage() {
                 <p className="font-medium">Afitsiant</p>
                 <p className="text-primary">1234</p>
               </div>
-              <div className="border rounded p-1">
+              {/* <div className="border rounded p-1">
                 <p className="font-medium">Oshpaz</p>
                 <p className="text-primary">5678</p>
-              </div>
-              <div className="border rounded p-1">
+              </div> */}
+              {/* <div className="border rounded p-1">
                 <p className="font-medium">Kassir</p>
                 <p className="text-primary">9012</p>
-              </div>
+              </div> */}
               <div className="border rounded p-1">
                 <p className="font-medium">Administrator</p>
                 <p className="text-primary">2006</p>
               </div>
-              <div className="border rounded p-1">
+              {/* <div className="border rounded p-1">
                 <p className="font-medium">Yetkazuvchi</p>
                 <p className="text-primary">7890</p>
-              </div>
+              </div> */}
             </div>
           </div>
         </CardFooter>

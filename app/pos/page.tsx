@@ -955,8 +955,8 @@ function POSPage() {
                       <>
                         {selectedTableId && tables.find((t: any) => t.id === selectedTableId) && <Badge variant="outline" className="text-xs px-1.5 py-0.5">Stol {tables.find((t: any) => t.id === selectedTableId)?.name}</Badge>}
                         {/* STOL TUGMASI O'ZGARTIRILDI */}
-                        <Button variant="outline" className="h-10 text-md px-7" onClick={() => setShowTableDialog(true)} disabled={isAnyLoading}>
-                          {selectedTableId ? "Stol O'zg." : "Stol"}
+                        <Button variant="outline" className="h-10 text-sm px-3" onClick={() => setShowTableDialog(true)} disabled={isAnyLoading}>
+                          {selectedTableId ? "Stol O'zg." : "Stol Tanlash"}
                         </Button>
                       </>
                     )}

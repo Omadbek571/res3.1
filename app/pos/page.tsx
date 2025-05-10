@@ -197,8 +197,8 @@ function POSPage() {
         }
         const finalPrice = parseFloat(orderDataForReceipt.final_price || 0).toLocaleString('uz-UZ');
 
-        const receiptHtml = `
-            <html><head><title>Chek #${orderId}</title>
+       const receiptHtml = `
+            <html><head><title> </title> 
             <style>
             body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #fff; }
             .receipt-container { width: 280px; margin: 20px auto; padding: 15px; border: 1px solid #555; background-color: #fff; color: #000; font-size: 11px; }
@@ -218,15 +218,15 @@ function POSPage() {
             }
             </style></head><body>
             <div class="receipt-container">
-            <h2>SmartResto POS</h2> <p style="text-align:center; font-size: 9px;">Oshxona nomi</p><hr>
+            <h2>SmartResto POS</h2> <hr>
             <p><strong>Buyurtma ID:</strong> #${orderId}</p><p><strong>Sana:</strong> ${orderDate}</p>
             <p><strong>Turi:</strong> ${currentOrderType}</p>${customerDetailsHtml}<hr>
             <table><thead><tr><th>Mahsulot</th><th style="text-align:center;">Miqdor</th><th style="text-align:right;">Narx</th><th style="text-align:right;">Jami</th></tr></thead>
             <tbody>${itemsHtml}</tbody></table><hr>
-            <div class="totals-section"><p>Mahsulotlar: ${subTotalPrice.toLocaleString('uz-UZ')} so'm</p>${serviceFeeHtml}
+            <div class="totals-section"><p>Ovqatlar: ${subTotalPrice.toLocaleString('uz-UZ')} so'm</p>${serviceFeeHtml}
             <p class="final-total">JAMI TO'LOV: ${finalPrice} so'm</p></div><hr>
             <p class="footer-text">Xaridingiz uchun rahmat!</p>
-            <p class="footer-text" style="font-size: 8px;">Chop etildi: ${formatDateTime(new Date().toISOString())}</p>
+            
             </div></body></html>`;
 
         const printWindow = window.open('', `_blank_customer_${orderId}`, 'width=320,height=500');
@@ -303,7 +303,7 @@ function POSPage() {
 
 
         const receiptHtml = `
-            <html><head><title>${receiptTitle} Cheki #${orderId}</title>
+            <html><head><title> Cheki</title>
             <style>
               body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #fff; }
               .receipt-container { width: 280px; margin: 10px auto; padding: 10px; background-color: #fff; color: #000; font-size: 12px; }
@@ -314,8 +314,9 @@ function POSPage() {
             </style></head><body>
             <div class="receipt-container"><h2>${receiptTitle}</h2>${headerInfo}<hr>
             <table><tbody>${itemsHtml}</tbody></table>${footerCommentHtml}<hr>
-            <p style="font-size:10px; text-align:center;">Chop etildi: ${formatDateTime(new Date().toISOString())}</p>
+            
             </div></body></html>`;
+
 
         const printWindow = window.open('', `_blank_kitchen_${receiptType}_${orderId}`, 'width=300,height=400');
         if (printWindow) {

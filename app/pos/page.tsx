@@ -16,8 +16,6 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const API_BASE_URL = "https://oshxonacopy.pythonanywhere.com/api";
@@ -98,7 +96,7 @@ function POSPage() {
       const res = await axios.get(`${API_BASE_URL}/categories/`, { headers: { Authorization: `Bearer ${token}` } });
       return res.data || [];
     },
-    onError: (err: any) => toast.error(err.message || "Kategoriyalarni yuklashda xato")
+    onError: (err: any) => console.error(err.message || "Kategoriyalarni yuklashda xato")
   });
 
   const { data: products = [], isLoading: isLoadingProducts, error: errorProducts } = useQuery({
@@ -109,7 +107,7 @@ function POSPage() {
       const res = await axios.get(`${API_BASE_URL}/products/`, { headers: { Authorization: `Bearer ${token}` } });
       return res.data || [];
     },
-    onError: (err: any) => toast.error(err.message || "Mahsulotlarni yuklashda xato")
+    onError: (err: any) => console.error(err.message || "Mahsulotlarni yuklashda xato")
   });
 
   const { data: tables = [], isLoading: isLoadingTables, error: errorTables } = useQuery({
@@ -120,7 +118,7 @@ function POSPage() {
       const res = await axios.get(`${API_BASE_URL}/tables/`, { headers: { Authorization: `Bearer ${token}` } });
       return res.data || [];
     },
-    refetchInterval: 10000, // Har 10 sekundda
+    refetchInterval: 10000, 
     onError: (err: any) => console.error("Stol xato (RQ):", err.message || "Stollarni yuklashda noma'lum xato")
   });
 
@@ -140,7 +138,7 @@ function POSPage() {
       return res.data || [];
     },
     enabled: showHistoryDialog,
-    onError: (err: any) => toast.error(err.message || "Tarixni yuklashda xato")
+    onError: (err: any) => console.error(err.message || "Tarixni yuklashda xato")
   });
 
   const formatDateTime = (d: string | Date | undefined) => {
@@ -152,7 +150,7 @@ function POSPage() {
 
   const handlePrintReceipt = (orderDataForReceipt: any) => {
     if (!orderDataForReceipt || !orderDataForReceipt.id) {
-        toast.warn("Chek uchun ma'lumotlar to'liq emas.");
+        console.warn("Chek uchun ma'lumotlar to'liq emas.");
         return;
     }
     try {
@@ -240,19 +238,18 @@ function POSPage() {
             printWindow.print();
             printWindow.onafterprint = () => printWindow.close();
             }, 500);
-        } else {
-            toast.error("Chekni chiqarish uchun yangi oyna ochilmadi.");
-        }
+        } 
+        // else {
+        //     console.error("Chekni chiqarish uchun yangi oyna ochilmadi."); // Olib tashlandi
+        // }
     } catch (error) {
         console.error("Chekni chop etishda xatolik:", error);
-        toast.error("Chekni chop etishda kutilmagan xatolik.");
     }
   };
 
-  // OSHXONA CHEKI FUNKSIYASIGA O'ZGARTIRISHLAR
-  const handlePrintKitchenReceipt = (orderDataForKitchen: any) => {
-    if (!orderDataForKitchen || !orderDataForKitchen.id) {
-        toast.warn("Oshxona cheki uchun ma'lumotlar to'liq emas.");
+  const handlePrintKitchenReceipt = (orderDataForKitchen: any, receiptType: 'full' | 'delta_added' | 'delta_cancelled' = 'full') => {
+    if (!orderDataForKitchen || !orderDataForKitchen.id || !orderDataForKitchen.items || orderDataForKitchen.items.length === 0) {
+        console.warn("Oshxona cheki uchun ma'lumotlar to'liq emas yoki mahsulot yo'q.");
         return;
     }
     try {
@@ -263,25 +260,30 @@ function POSPage() {
         const waiterName = orderDataForKitchen.created_by ? `${orderDataForKitchen.created_by.first_name || ''} ${orderDataForKitchen.created_by.last_name || ''}`.trim() : "";
         const orderComment = orderDataForKitchen.comment || ""; 
 
-        const isDeltaReceipt = orderDataForKitchen.is_delta_receipt === true; // Yangi flag
-        const receiptTitle = isDeltaReceipt ? "BUYURTMAGA QO'SHIMCHA" : "OSHXONA";
-
-        let itemsHtml = '';
-        if (orderDataForKitchen.items && orderDataForKitchen.items.length > 0) {
-            orderDataForKitchen.items.forEach((item: any) => {
-                const productName = item.product_details?.name || 'Noma\'lum mahsulot';
-                const quantity = item.quantity;
-                // Agar delta chek bo'lsa va item.reason bo'lsa, uni ko'rsatamiz
-                const reasonText = isDeltaReceipt && item.reason ? ` <em style="font-size:10px; color: #555;">(${item.reason})</em>` : "";
-                itemsHtml += `
-                    <tr style="font-size: 14px; font-weight: bold;">
-                        <td style="padding: 5px 2px; vertical-align: top; word-break: break-word;">${productName}${reasonText}</td>
-                        <td style="text-align: right; padding: 5px 2px; vertical-align: top; font-size: 16px; white-space: nowrap;">${quantity} ta</td>
-                    </tr>`;
-            });
-        } else {
-            itemsHtml = '<tr><td colspan="2" style="text-align:center; padding:10px;">Mahsulotlar topilmadi</td></tr>';
+        let receiptTitle = "OSHXONA";
+        let titleFontSize = '20px';
+        if (receiptType === 'delta_added') {
+            receiptTitle = "BUYURTMAGA QO'SHIMCHA";
+            titleFontSize = '18px';
+        } else if (receiptType === 'delta_cancelled') {
+            receiptTitle = "BUYURTMA O'ZGARISHI (BEKOR/KAMAYDI)";
+            titleFontSize = '16px';
         }
+        
+        let itemsHtml = '';
+        orderDataForKitchen.items.forEach((item: any) => {
+            const productName = item.product_details?.name || 'Noma\'lum mahsulot';
+            const quantity = item.quantity;
+            let reasonText = "";
+            if (item.reason) { 
+                 reasonText = ` <em style="font-size:10px; color: #555;">(${item.reason})</em>`;
+            }
+            itemsHtml += `
+                <tr style="font-size: 14px; font-weight: bold;">
+                    <td style="padding: 5px 2px; vertical-align: top; word-break: break-word;">${productName}${reasonText}</td>
+                    <td style="text-align: right; padding: 5px 2px; vertical-align: top; font-size: 16px; white-space: nowrap;">${quantity} ta</td>
+                </tr>`;
+        });
 
         let headerInfo = `<p style="font-size: 16px; font-weight: bold;">Buyurtma #${orderId}</p>`;
         if (orderDataForKitchen.order_type === 'dine_in' && tableName) {
@@ -293,18 +295,19 @@ function POSPage() {
         if (waiterName) {
             headerInfo += `<p>Afitsant: ${waiterName}</p>`;
         }
-
+        
         let footerCommentHtml = "";
-        if (orderComment) {
+        if (receiptType !== 'delta_cancelled' && orderComment) { 
             footerCommentHtml = `<hr><p style="font-weight: bold; font-size: 13px; padding-top: 5px; text-align: center;">IZOH: ${orderComment}</p>`;
         }
 
+
         const receiptHtml = `
-            <html><head><title>${isDeltaReceipt ? "Qo'shimcha" : "Oshxona"} Cheki #${orderId}</title>
+            <html><head><title>${receiptTitle} Cheki #${orderId}</title>
             <style>
               body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #fff; }
               .receipt-container { width: 280px; margin: 10px auto; padding: 10px; background-color: #fff; color: #000; font-size: 12px; }
-              .receipt-container h2 { text-align: center; margin: 0 0 10px 0; font-size: ${isDeltaReceipt ? '18px' : '20px'}; font-weight: bold; }
+              .receipt-container h2 { text-align: center; margin: 0 0 10px 0; font-size: ${titleFontSize}; font-weight: bold; }
               .receipt-container p { margin: 4px 0; line-height: 1.3; } .receipt-container hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
               .receipt-container table { width: 100%; border-collapse: collapse; margin-top: 5px; }
               @media print { body { margin: 0; padding: 0; background-color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;} .receipt-container { width: 100%; margin: 0; padding: 0; border: none; box-shadow: none; } }
@@ -314,16 +317,18 @@ function POSPage() {
             <p style="font-size:10px; text-align:center;">Chop etildi: ${formatDateTime(new Date().toISOString())}</p>
             </div></body></html>`;
 
-        const printWindow = window.open('', `_blank_kitchen_${isDeltaReceipt ? 'delta_' : ''}${orderId}`, 'width=300,height=400');
+        const printWindow = window.open('', `_blank_kitchen_${receiptType}_${orderId}`, 'width=300,height=400');
         if (printWindow) {
             printWindow.document.write(receiptHtml);
             printWindow.document.close();
             printWindow.focus();
             setTimeout(() => { printWindow.print(); printWindow.onafterprint = () => printWindow.close(); }, 500);
         } 
+        // else {
+        //     console.error("Oshxona chekini chiqarish uchun yangi oyna ochilmadi."); // Olib tashlandi
+        // }
     } catch (error) {
         console.error("Oshxona chekini chop etishda xatolik:", error);
-        toast.error("Oshxona chekini chop etishda kutilmagan xatolik.");
     }
   };
 
@@ -341,15 +346,21 @@ function POSPage() {
     setOrderType('dine_in');
     setCustomerInfo({ name: "", phone: "+998 ", address: "" });
     if (informUser && previousId) {
-      toast.info(`Buyurtma #${previousId} bilan ishlash yakunlandi/bekor qilindi.`);
+      console.log(`Buyurtma #${previousId} bilan ishlash yakunlandi/bekor qilindi.`);
     }
   };
 
   const loadOrderForEditing = async (orderIdToLoad: number, associatedTable: any = null) => {
     const token = getToken();
-    if (!token || !orderIdToLoad) { toast.error("Tahrirlash uchun ID/token yetarli emas."); return; }
+    if (!token || !orderIdToLoad) { 
+        console.error("Tahrirlash uchun ID/token yetarli emas.");
+        return; 
+    }
     const isAnyMutationPending = createOrderMutation.isPending || updateOrderItemsMutation.isPending || checkoutMutation.isPending || reorderMutation.isPending;
-    if (isAnyMutationPending) { toast.warn("Iltimos, avvalgi amal tugashini kuting."); return; }
+    if (isAnyMutationPending) { 
+        console.warn("Iltimos, avvalgi amal tugashini kuting.");
+        return; 
+    }
     if (isEditLoadingManual && editingOrderId === orderIdToLoad) { return; }
 
     setIsEditLoadingManual(true);
@@ -368,14 +379,14 @@ function POSPage() {
       });
 
       if (data.status === 'paid' || data.status === 'completed' || data.status === 'cancelled') {
-        toast.warn(`Buyurtma #${orderIdToLoad} (${data.status_display}) holatida tahrirlab bo'lmaydi.`);
+        console.warn(`Buyurtma #${orderIdToLoad} (${data.status_display}) holatida tahrirlab bo'lmaydi.`);
         setIsEditLoadingManual(false);
         setShowHistoryDialog(true);
         return;
       }
       
       setOrderToEdit(data);
-      setOriginalOrderItems(JSON.parse(JSON.stringify(data.items || []))); // Original itemlarni saqlab qolamiz
+      setOriginalOrderItems(JSON.parse(JSON.stringify(data.items || [])));
       setEditingOrderId(orderIdToLoad);
       setOrderType(data.order_type || "dine_in");
       setCart([]); 
@@ -388,7 +399,7 @@ function POSPage() {
         setSelectedTableId(null);
       }
 
-      toast.success(`Buyurtma #${orderIdToLoad} tahrirlash uchun yuklandi.`);
+      console.log(`Buyurtma #${orderIdToLoad} tahrirlash uchun yuklandi.`);
       setShowHistoryDialog(false);
       setShowTableDialog(false);
 
@@ -397,7 +408,6 @@ function POSPage() {
       let errorMsg = `Buyurtma (${orderIdToLoad}) yuklashda xato: ${err.message || 'Noma\'lum server xatosi'}`;
       if (err.response?.data?.detail) errorMsg = err.response.data.detail;
       setEditErrorManual(errorMsg);
-      toast.error(errorMsg);
       finishEditingInternal(); 
     } finally {
       setIsEditLoadingManual(false);
@@ -414,12 +424,12 @@ function POSPage() {
       return res.data;
     },
     onSuccess: (data) => {
-      toast.success(`Buyurtma #${data.id} muvaffaqiyatli yaratildi!`);
+      console.log(`Buyurtma #${data.id} muvaffaqiyatli yaratildi!`);
       if (data && data.items) {
         handlePrintReceipt(data); 
-        handlePrintKitchenReceipt(data); // Yangi buyurtma uchun to'liq oshxona cheki
+        handlePrintKitchenReceipt(data, 'full');
       } else {
-        toast.warn("Chek uchun ma'lumotlar to'liq kelmadi.");
+        console.warn("Chek uchun ma'lumotlar to'liq kelmadi.");
       }
       finishEditingInternal(); 
       setShowCustomerDialog(false);
@@ -442,7 +452,7 @@ function POSPage() {
           msg = Object.entries(errorData).map(([k, v]: [string, any]) => `${k}: ${Array.isArray(v) ? v.join(',') : v}`).join('; ');
         }
       } else if (error.message) { msg = error.message; }
-      toast.error(`Xatolik: ${msg}`);
+      setSubmitEditError(`Xatolik: ${msg}`);
     }
   });
 
@@ -456,60 +466,41 @@ function POSPage() {
     },
     onMutate: () => { setSubmitEditError(null); },
     onSuccess: (data, variables) => {
-      toast.success(`Buyurtma #${variables.orderId} muvaffaqiyatli yangilandi!`);
+      console.log(`Buyurtma #${variables.orderId} muvaffaqiyatli yangilandi!`);
       
       const newItemsFromResponse = data.items || [];
-      // originalOrderItems bu yerda shu mutatsiyadan AVVALGI holatni saqlaydi
-      const deltaKitchenItems: any[] = [];
+      const addedOrIncreasedItems: any[] = [];
+      const removedOrDecreasedItems: any[] = [];
 
       newItemsFromResponse.forEach((newItem: any) => {
         const oldItem = originalOrderItems.find(oi => oi.product === newItem.product);
-        if (!oldItem) { // Mahsulot yangi qo'shilgan
-          deltaKitchenItems.push({ 
-            ...newItem, 
-            quantity: newItem.quantity, 
-            reason: "Yangi" // Sababini belgilaymiz
-          });
-        } else if (newItem.quantity > oldItem.quantity) { // Mahsulot miqdori oshgan
-          deltaKitchenItems.push({ 
-            ...newItem, 
-            quantity: newItem.quantity - oldItem.quantity, // Faqat qo'shilgan miqdorni olamiz
-            reason: "Qo'shimcha" // Sababini belgilaymiz
-          });
+        if (!oldItem) { 
+          addedOrIncreasedItems.push({ ...newItem, quantity: newItem.quantity, reason: "Yangi" });
+        } else if (newItem.quantity > oldItem.quantity) { 
+          addedOrIncreasedItems.push({ ...newItem, quantity: newItem.quantity - oldItem.quantity, reason: "Qo'shimcha" });
         }
-        // Agar miqdor kamaygan bo'lsa yoki o'chirilgan bo'lsa,
-        // hozircha ularni delta chekka qo'shmaymiz, chunki asosiy muammo qayta pishirish.
-        // Agar kerak bo'lsa, bu logikani kengaytirish mumkin.
+      });
+
+      originalOrderItems.forEach((oldItem: any) => {
+        const newItem = newItemsFromResponse.find(ni => ni.product === oldItem.product);
+        if (!newItem) { 
+            removedOrDecreasedItems.push({ ...oldItem, quantity: oldItem.quantity, reason: "Bekor qilindi" });
+        } else if (newItem.quantity < oldItem.quantity) { 
+            removedOrDecreasedItems.push({ ...oldItem, quantity: oldItem.quantity - newItem.quantity, reason: "Kamaytirildi" });
+        }
       });
       
-      // Faqat o'zgarishlar bo'lsa (yangi yoki qo'shimcha mahsulotlar) oshxona chekini chiqaramiz
-      if (deltaKitchenItems.length > 0) {
-        const deltaOrderDataForKitchen = {
-          ...data, // Buyurtmaning qolgan ma'lumotlari (ID, stol, vaqt va h.k.)
-          items: deltaKitchenItems, // Faqat o'zgargan itemlar
-          is_delta_receipt: true // Bu delta chek ekanligini bildiruvchi flag
-        };
-        handlePrintKitchenReceipt(deltaOrderDataForKitchen);
-      } else {
-        // Agar faqat izoh o'zgargan bo'lsa yoki mahsulot olib tashlangan/kamaytirilgan bo'lsa,
-        // va yangi/qo'shimcha mahsulot bo'lmasa, bu yerga tushadi.
-        // Bu holatda "buyurtma yangilandi" degan xabar yetarli bo'lishi mumkin.
-        // Yoki "Oshxona uchun o'zgarish yo'q" deb toast chiqarish mumkin.
-        const onlyCommentChangedOrItemRemovedOrDecreased = JSON.stringify(originalOrderItems.map(it => ({p:it.product, q:it.quantity})).sort()) !== JSON.stringify(newItemsFromResponse.map(it => ({p:it.product, q:it.quantity})).sort()) || orderToEdit?.comment !== data.comment;
-
-        if (onlyCommentChangedOrItemRemovedOrDecreased && (data.comment && orderToEdit?.comment !== data.comment)) {
-             // Agar faqat komment o'zgargan bo'lsa, va hech qanday mahsulot qo'shilmagan/ortmagan bo'lsa,
-             // to'liq yangilangan buyurtma bilan (faqat komment uchun) oshxona cheki chiqarish mumkin.
-             // Yoki buni alohida kichik "IZOH YANGILANDI" cheki qilish mumkin.
-             // Hozircha, agar komment o'zgargan bo'lsa, to'liq chek chiqaramiz, lekin bu chefni chalg'itishi mumkin.
-             // Eng yaxshisi, agar deltaKitchenItems bo'sh bo'lsa, faqat toast bilan chegaralanish.
-             // toast.info("Faqat izoh o'zgardi yoki mahsulot olib tashlandi/kamaytirildi.");
-        }
+      if (addedOrIncreasedItems.length > 0) {
+        const deltaAddedData = { ...data, items: addedOrIncreasedItems };
+        handlePrintKitchenReceipt(deltaAddedData, 'delta_added');
+      }
+      if (removedOrDecreasedItems.length > 0) {
+        const deltaCancelledData = { ...data, items: removedOrDecreasedItems };
+        handlePrintKitchenReceipt(deltaCancelledData, 'delta_cancelled');
       }
 
-      // State'ni yangilaymiz
       setOrderToEdit((prev: any) => ({ ...prev, ...data, items: newItemsFromResponse }));
-      setOriginalOrderItems(JSON.parse(JSON.stringify(newItemsFromResponse))); // originalOrderItems endi yangi holatga o'tadi
+      setOriginalOrderItems(JSON.parse(JSON.stringify(newItemsFromResponse))); 
 
       queryClient.setQueryData(['orderDetails', variables.orderId], data);
       queryClient.invalidateQueries({ queryKey: ['tables'] });
@@ -528,7 +519,6 @@ function POSPage() {
         }
         else { errorMsg = `Ulanish xatosi: ${error.message}`; }
         setSubmitEditError(errorMsg);
-        toast.error(errorMsg, { autoClose: 7000 });
     }
   });
 
@@ -541,7 +531,7 @@ function POSPage() {
       return res.data;
     },
     onSuccess: (data, variables) => {
-      toast.success(`Stol #${variables.tableId} uchun to'lov amalga oshirildi! Buyurtma #${data.id} yopildi.`);
+      console.log(`Stol #${variables.tableId} uchun to'lov amalga oshirildi! Buyurtma #${data.id} yopildi.`);
       if (data && data.items) { handlePrintReceipt(data); } 
       setShowCheckoutDialog(false);
       setTableForCheckout(null);
@@ -560,7 +550,7 @@ function POSPage() {
             else if (typeof errorData === 'object') msg = Object.entries(errorData).map(([k,v]:[string,any])=>`${k}: ${Array.isArray(v)?v.join(','):v}`).join('; ')
         }
         else if (error.message) { msg = error.message; }
-        toast.error(`Xatolik: ${msg}`, { autoClose: 7000 });
+        setSubmitEditError(`Xatolik: ${msg}`);
         if (error.response?.status === 404 || error.response?.data?.detail?.includes("active order")) {
             queryClient.invalidateQueries({ queryKey: ['tables'] });
         }
@@ -579,10 +569,10 @@ function POSPage() {
       return res.data;
     },
     onSuccess: (data, variables: any) => {
-      toast.success(`Buyurtma #${variables.originalOrderId} dan nusxa (#${data.id}) yaratildi!`);
+      console.log(`Buyurtma #${variables.originalOrderId} dan nusxa (#${data.id}) yaratildi!`);
       if (data && data.items) { 
         handlePrintReceipt(data); 
-        handlePrintKitchenReceipt(data); 
+        handlePrintKitchenReceipt(data, 'full'); 
       }
       finishEditingInternal(); 
       setShowHistoryDialog(false);
@@ -605,7 +595,7 @@ function POSPage() {
              }
             else if(typeof errorData === 'object') msg=Object.entries(errorData).map(([k,v]:[string,any])=>`${k}:${Array.isArray(v)?v.join(','):v}`).join('; ');
         } else if (error.message) { msg = error.message; }
-        toast.error(`Xatolik: ${msg}`);
+        setSubmitEditError(`Xatolik: ${msg}`);
     }
   });
 
@@ -655,7 +645,10 @@ function POSPage() {
       handleLocalAddItemFromProductList(product);
       return;
     }
-    if (!product?.id) { toast.error("Mahsulot qo'shishda xatolik."); return; }
+    if (!product?.id) { 
+        console.error("Mahsulot qo'shishda xatolik.");
+         return; 
+    }
     setCart((prev) => {
       const exist = prev.find((i) => i.id === product.id);
       if (exist) return prev.map((i) => i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
@@ -722,13 +715,30 @@ function POSPage() {
   
   const submitOrder = () => {
     if (editingOrderId) return;
-    if (cart.length === 0) { toast.warn("Savat bo‘sh!"); return; }
-    if (orderType === "dine_in" && !selectedTableId) { toast.warn("Stol tanlang!"); setShowTableDialog(true); return; }
+    if (cart.length === 0) { 
+        console.warn("Savat bo‘sh!");
+        setSubmitEditError("Savat bo‘sh!");
+        return; 
+    }
+    if (orderType === "dine_in" && !selectedTableId) { 
+        console.warn("Stol tanlang!");
+        setSubmitEditError("Stol tanlang!");
+        setShowTableDialog(true); 
+        return; 
+    }
     const phoneDigits = customerInfo.phone.replace(/\D/g, '');
     if ((orderType === "takeaway" || orderType === "delivery") && (!customerInfo.name || phoneDigits.length < 12 )) { 
-        setShowCustomerDialog(true); toast.warn("Mijoz ismi va telefon raqamini to'liq kiriting!"); return; 
+        setShowCustomerDialog(true); 
+        console.warn("Mijoz ismi va telefon raqamini to'liq kiriting!");
+        setSubmitEditError("Mijoz ismi va telefon raqamini to'liq kiriting!");
+        return; 
     }
-    if (orderType === "delivery" && !customerInfo.address) { setShowCustomerDialog(true); toast.warn("Yetkazish manzilini kiriting!"); return; }
+    if (orderType === "delivery" && !customerInfo.address) { 
+        setShowCustomerDialog(true); 
+        console.warn("Yetkazish manzilini kiriting!");
+        setSubmitEditError("Yetkazish manzilini kiriting!");
+        return; 
+    }
 
     const orderData = {
       order_type: orderType,
@@ -743,10 +753,14 @@ function POSPage() {
 
   const submitEditedOrderChanges = () => {
     if (!editingOrderId || !orderToEdit || !originalOrderItems || updateOrderItemsMutation.isPending || isEditLoadingManual) {
-      toast.warn("O'zgarishlarni saqlash mumkin emas."); return;
+      console.warn("O'zgarishlarni saqlash mumkin emas.");
+      setSubmitEditError("O'zgarishlarni saqlash mumkin emas.");
+      return;
     }
     if (orderToEdit.status === 'paid' || orderToEdit.status === 'completed' || orderToEdit.status === 'cancelled') {
-        toast.warn(`Buyurtma #${editingOrderId} (${orderToEdit.status_display}) holatida, o'zgartirib bo'lmaydi.`); return;
+        console.warn(`Buyurtma #${editingOrderId} (${orderToEdit.status_display}) holatida, o'zgartirib bo'lmaydi.`);
+        setSubmitEditError(`Buyurtma #${editingOrderId} (${orderToEdit.status_display}) holatida, o'zgartirib bo'lmaydi.`);
+        return;
     }
     
     const currentItems = orderToEdit.items || [];
@@ -769,18 +783,26 @@ function POSPage() {
       }
     });
 
-    if (operations.length === 0) { toast.info("Hech qanday o'zgarish qilinmadi."); return; }
+    if (operations.length === 0) { 
+        console.info("Hech qanday o'zgarish qilinmadi.");
+        return; 
+    }
     updateOrderItemsMutation.mutate({ orderId: editingOrderId, payload: { items_operations: operations } });
   };
   
   const reorderToSameTable = (order: any) => {
-    if (isAnyLoading) { toast.warn("Boshqa amal bajarilmoqda..."); return; }
+    if (isAnyLoading) { 
+        console.warn("Boshqa amal bajarilmoqda...");
+         return; 
+    }
     if (order.status !== "completed" && order.status !== "paid") { 
-        toast.warn("Bu funksiya faqat yakunlangan buyurtmalar uchun."); return; 
+        console.warn("Bu funksiya faqat yakunlangan buyurtmalar uchun.");
+         return; 
     }
     const tableIdForReorder = order.order_type === "dine_in" ? (order.table?.id || order.table_id) : null;
     if (order.order_type === "dine_in" && !tableIdForReorder) {
-        toast.error("Stol ma'lumotlari topilmadi."); return; 
+        console.error("Stol ma'lumotlari topilmadi.");
+         return; 
     }
     const orderData = {
       order_type: order.order_type,
@@ -795,9 +817,18 @@ function POSPage() {
 
   const handleCustomerInfoSave = () => {
     const phoneDigits = customerInfo.phone.replace(/\D/g, '');
-    if (!customerInfo.name || phoneDigits.length < 12 ) { toast.warn("Ism va raqamni to'liq kiriting!"); return; }
-    if (orderType === "delivery" && !customerInfo.address) { toast.warn("Manzilni kiriting!"); return; }
-    setShowCustomerDialog(false); toast.info("Mijoz ma'lumotlari kiritildi.");
+    if (!customerInfo.name || phoneDigits.length < 12 ) { 
+        console.warn("Ism va raqamni to'liq kiriting!");
+        setSubmitEditError("Ism va raqamni to'liq kiriting!");
+        return; 
+    }
+    if (orderType === "delivery" && !customerInfo.address) { 
+        console.warn("Manzilni kiriting!");
+        setSubmitEditError("Manzilni kiriting!");
+         return; 
+    }
+    setShowCustomerDialog(false); 
+    console.info("Mijoz ma'lumotlari kiritildi.");
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -810,12 +841,19 @@ function POSPage() {
   };
   
   const cancelEditing = () => {
-    if (updateOrderItemsMutation.isPending) { toast.warn("Saqlash jarayoni ketmoqda..."); return; }
+    if (updateOrderItemsMutation.isPending) { 
+        console.warn("Saqlash jarayoni ketmoqda...");
+        return; 
+    }
     finishEditingInternal(true);
   };
 
   const handleLogout = () => {
-    if (typeof window !== "undefined") { localStorage.removeItem("token"); window.location.href = "/auth"; toast.info("Tizimdan chiqildi"); }
+    if (typeof window !== "undefined") { 
+        localStorage.removeItem("token"); 
+        window.location.href = "/auth"; 
+        console.info("Tizimdan chiqildi");
+    }
   };
 
   const fetchAndPrintCurrentOrderReceipt = async (type: 'customer' | 'kitchen' = 'customer') => {
@@ -832,13 +870,11 @@ function POSPage() {
       if (type === 'customer') {
         handlePrintReceipt(res.data);
       } else {
-        // Hozirgi buyurtma uchun oshxona chekini chiqarganda to'liq chek chiqadi.
-        // Faqat yangilanish (update) paytida delta chek kerak.
-        handlePrintKitchenReceipt(res.data); 
+        handlePrintKitchenReceipt(res.data, 'full'); 
       }
-    } catch (err: any) {
+    } catch (err: any) { 
       console.error(`Joriy ${type} chekini olishda xatolik:`, err);
-      toast.error(err.message || `Joriy ${type} chek ma'lumotlarini olishda xatolik.`);
+      setSubmitEditError(err.message || `Joriy ${type} chek ma'lumotlarini olishda xatolik.`);
     } finally {
       if (type === 'customer') setIsFetchingReceipt(false);
       if (type === 'kitchen') setIsFetchingKitchenReceipt(false);
@@ -849,7 +885,6 @@ function POSPage() {
   return (
     <TooltipProvider>
       <div className="flex h-screen flex-col bg-muted/40">
-        <ToastContainer position="bottom-right" autoClose={4000} theme="colored" />
         
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6 shrink-0">
           <div className="flex items-center gap-2 sm:gap-4">
@@ -873,7 +908,7 @@ function POSPage() {
                     setSelectedTableId(null);
                     setCustomerInfo({ name: "", phone: "+998 ", address: "" });
                     setCart([]); 
-                    toast.info(`Buyurtma turi "${value === 'dine_in' ? 'Shu yerda' : value === 'takeaway' ? 'Olib ketish' : 'Yetkazish'}" ga o'zgartirildi.`);
+                    console.log(`Buyurtma turi "${value === 'dine_in' ? 'Shu yerda' : value === 'takeaway' ? 'Olib ketish' : 'Yetkazish'}" ga o'zgartirildi.`);
                 }
               }}
               className={`w-full max-w-md ${editingOrderId || isMutationLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -952,7 +987,6 @@ function POSPage() {
                     {orderType === "dine_in" && (
                       <>
                         {selectedTableId && tables.find((t: any) => t.id === selectedTableId) && <Badge variant="outline" className="text-xs px-1.5 py-0.5">Stol {tables.find((t: any) => t.id === selectedTableId)?.name}</Badge>}
-                        {/* STOL TUGMASI O'ZGARTIRILDI */}
                         <Button variant="outline" className="h-10 text-sm px-3" onClick={() => setShowTableDialog(true)} disabled={isAnyLoading}>
                           {selectedTableId ? "Stol O'zg." : "Stol Tanlash"}
                         </Button>
@@ -1063,7 +1097,10 @@ function POSPage() {
                                 if (editingOrderId === table.active_order_id) { setShowTableDialog(false); return; }
                                 finishEditingInternal(); 
                                 loadOrderForEditing(table.active_order_id, table);
-                              } else { toast.warn(`Stol ${table.name} band, lekin aktiv buyurtmasi yo'q.`); queryClient.invalidateQueries({ queryKey: ['tables'] }); }
+                              } else { 
+                                console.warn(`Stol ${table.name} band, lekin aktiv buyurtmasi yo'q.`);
+                                queryClient.invalidateQueries({ queryKey: ['tables'] }); 
+                              }
                             } else { 
                               if (editingOrderId) { 
                                 finishEditingInternal(true);
@@ -1075,7 +1112,7 @@ function POSPage() {
                               setSelectedTableId(table.id);
                               setCustomerInfo({ name: "", phone: "+998 ", address: "" });
                               setShowTableDialog(false);
-                              toast.success(`Stol ${table.name} tanlandi.`);
+                              console.log(`Stol ${table.name} tanlandi.`);
                             }
                           }} disabled={isAnyLoading}>
                           <div className="font-semibold text-base leading-tight">{table.name}</div>
@@ -1135,8 +1172,14 @@ function POSPage() {
                     <Card key={order.id}
                       className={`overflow-hidden shadow-sm hover:shadow-md group relative ${['completed', 'paid', 'cancelled'].includes(order.status) ? 'opacity-80' : 'cursor-pointer'} ${isEditLoadingManual && editingOrderId === order.id ? 'ring-2 ring-primary' : ''}`}
                       onClick={() => {
-                        if (['completed', 'paid', 'cancelled'].includes(order.status)) { toast.warn(`Buyurtma (${order.status_display}) tahrirlanmaydi.`); return; }
-                        if (isAnyLoading) { toast.info("Amal bajarilmoqda..."); return; }
+                        if (['completed', 'paid', 'cancelled'].includes(order.status)) { 
+                            console.warn(`Buyurtma (${order.status_display}) tahrirlanmaydi.`);
+                            return; 
+                        }
+                        if (isAnyLoading) { 
+                            console.info("Amal bajarilmoqda...");
+                            return; 
+                        }
                         if (editingOrderId === order.id) { setShowHistoryDialog(false); return; }
                         finishEditingInternal(); loadOrderForEditing(order.id);
                       }}>
@@ -1194,10 +1237,28 @@ function POSPage() {
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline" disabled={checkoutMutation.isPending}>Bekor</Button></DialogClose>
                     <Button onClick={() => {
-                        if (!tableForCheckout || !tableForCheckout.id) { toast.error("Stol topilmadi!"); return; }
+                        if (!tableForCheckout || !tableForCheckout.id) { 
+                            console.error("Stol topilmadi!");
+                            setSubmitEditError("Stol topilmadi!");
+                             return; 
+                        }
                         const payload: any = { method: paymentDetails.method };
-                        if (paymentDetails.method === 'cash') { if (!paymentDetails.received_amount || parseFloat(paymentDetails.received_amount) < parseFloat(tableForCheckout?.active_order_final_price || "0")) { toast.error("Qabul qilingan summa xato."); return; } payload.received_amount = parseFloat(paymentDetails.received_amount); }
-                        if (paymentDetails.method === 'mobile') { if (!paymentDetails.mobile_provider) {toast.error("Mobil provayder tanlanmagan."); return;} payload.mobile_provider = paymentDetails.mobile_provider; }
+                        if (paymentDetails.method === 'cash') { 
+                            if (!paymentDetails.received_amount || parseFloat(paymentDetails.received_amount) < parseFloat(tableForCheckout?.active_order_final_price || "0")) { 
+                                console.error("Qabul qilingan summa xato.");
+                                setSubmitEditError("Qabul qilingan summa xato.");
+                                return; 
+                            } 
+                            payload.received_amount = parseFloat(paymentDetails.received_amount); 
+                        }
+                        if (paymentDetails.method === 'mobile') { 
+                            if (!paymentDetails.mobile_provider) {
+                                console.error("Mobil provayder tanlanmagan.");
+                                setSubmitEditError("Mobil provayder tanlanmagan.");
+                                return;
+                            } 
+                            payload.mobile_provider = paymentDetails.mobile_provider; 
+                        }
                         checkoutMutation.mutate({ tableId: tableForCheckout.id, paymentData: payload });
                     }} disabled={checkoutMutation.isPending || (paymentDetails.method === 'cash' && (!paymentDetails.received_amount || parseFloat(paymentDetails.received_amount) < parseFloat(tableForCheckout?.active_order_final_price || "0")))}>
                         {checkoutMutation.isPending ? <Loader2 className="animate-spin mr-2 h-4 w-4"/> : null} To'lash

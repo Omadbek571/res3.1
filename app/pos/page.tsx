@@ -320,9 +320,7 @@ function POSPage() {
             printWindow.document.close();
             printWindow.focus();
             setTimeout(() => { printWindow.print(); printWindow.onafterprint = () => printWindow.close(); }, 500);
-        } else {
-            toast.error("Oshxona chekini chiqarish uchun yangi oyna ochilmadi.");
-        }
+        } 
     } catch (error) {
         console.error("Oshxona chekini chop etishda xatolik:", error);
         toast.error("Oshxona chekini chop etishda kutilmagan xatolik.");

@@ -53,7 +53,9 @@ export default function AuthPage() {
         }
 
         const role = res.data.user.role.name
-        if (role === "waiter") {
+        console.log(56, role);
+        
+        if (role === "Afitsiant") {
           router.push("/pos")
         } else if (role === "chef") {
           router.push("/kitchen")

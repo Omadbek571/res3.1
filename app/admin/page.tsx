@@ -6,7 +6,7 @@ import dynamic from "next/dynamic"
 import {
   BarChart3, Calendar, ChevronDown, CreditCard, DollarSign, Download, FileText, Home,
   LogOut, Menu, PieChart, Plus, Settings, ShoppingCart, Sliders, Store, Users, X,
-  Loader2, Paperclip, Printer, Package, Edit, LayoutGrid, Trash2, Armchair
+  Loader2, Paperclip, Printer, Package, Edit, LayoutGrid, Trash2, Armchair, ChefHat // YANGI: ChefHat ikonkasi
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -82,94 +82,6 @@ const getPaymentMethodDisplay = (method) => {
     }
 }
 
-const printReceipt = (orderDetails) => {
-  if (!orderDetails) {
-    toast.error("Chek ma'lumotlari topilmadi!")
-    return
-  }
-
-  const totalItemsPrice = parseFloat(orderDetails.total_price || 0)
-  const serviceFeeAmount = parseFloat(orderDetails.final_price || 0) - totalItemsPrice
-  const finalPrice = parseFloat(orderDetails.final_price || 0)
-  const paymentMethodForReceipt = orderDetails.payment ? getPaymentMethodDisplay(orderDetails.payment.method) : 'To\'lanmagan';
-
-  const receivedAmount = orderDetails.payment && orderDetails.payment.received_amount != null
-      ? parseFloat(orderDetails.payment.received_amount) || 0
-      : null;
-  const changeAmount = orderDetails.payment && orderDetails.payment.change_amount != null
-      ? parseFloat(orderDetails.payment.change_amount) || 0
-      : null;
-
-  const receiptHTML = `
-    <html>
-      <head>
-        <title>Chek #${orderDetails.id}</title>
-        <meta charset="UTF-8">
-        <style>
-          @media print { @page { margin: 0; } body { margin: 0.5cm; } }
-          body { font-family: 'Arial', sans-serif; margin: 10px; font-size: 10pt; width: 72mm; color: #000; }
-          .receipt { width: 100%; }
-          .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 10px; }
-          .header h1 { margin: 0 0 5px 0; font-size: 14pt; } .header p { margin: 2px 0; }
-          .details { margin-bottom: 10px; } .details p { margin: 3px 0; line-height: 1.3; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-          th, td { padding: 3px 1px; text-align: left; vertical-align: top; font-size: 9pt; }
-          th { border-bottom: 1px solid #000; font-weight: bold;}
-          td:nth-child(2), td:nth-child(3), td:nth-child(4) { text-align: right; }
-          th:nth-child(2), th:nth-child(3), th:nth-child(4) { text-align: right; }
-          .total { border-top: 1px dashed #000; padding-top: 5px; margin-top: 10px; }
-          .total p { margin: 4px 0; display: flex; justify-content: space-between; }
-          .total p span:first-child { text-align: left; padding-right: 10px; }
-          .total p span:last-child { text-align: right; font-weight: bold; }
-          .total p.final-price span:last-child { font-size: 11pt; }
-          .footer { text-align: center; margin-top: 15px; font-size: 9pt; border-top: 1px dashed #000; padding-top: 5px;}
-        </style>
-      </head>
-      <body>
-        <div class="receipt">
-          <div class="header"><h1>SmartResto</h1><p>Chek #${orderDetails.id}</p></div>
-          <div class="details">
-            <p>Sana: ${new Date(orderDetails.created_at).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-            <p>Mijoz: ${orderDetails.customer_name || 'Noma\'lum'}</p>
-            <p>Xodim: ${orderDetails.created_by?.first_name || ''} ${orderDetails.created_by?.last_name || 'N/A'}</p>
-            ${orderDetails.table ? `<p>Stol: ${orderDetails.table.name || 'N/A'}</p>` : ''}
-            <p>To'lov usuli: ${paymentMethodForReceipt}</p>
-            <p>Buyurtma turi: ${orderDetails.order_type_display || 'N/A'}</p>
-          </div>
-          <table><thead><tr><th>Mahsulot</th><th>Miq.</th><th>Narx</th><th>Jami</th></tr></thead>
-            <tbody>${(Array.isArray(orderDetails.items) ? orderDetails.items : []).map(item => `<tr><td>${item.product_details?.name || 'Noma\'lum'}</td><td>${item.quantity}</td><td>${parseFloat(item.unit_price || 0).toLocaleString()}</td><td>${parseFloat(item.total_price || 0).toLocaleString()}</td></tr>`).join('')}</tbody>
-          </table>
-          <div class="total">
-            <p><span>Jami (Mahs.):</span> <span>${totalItemsPrice.toLocaleString()} so'm</span></p>
-            ${serviceFeeAmount > 0 ? `<p><span>Xizmat haqi (${orderDetails.service_fee_percent || 0}%):</span> <span>+ ${serviceFeeAmount.toLocaleString()} so'm</span></p>` : ''}
-            <p class="final-price"><span>Jami:</span> <span>${finalPrice.toLocaleString()} so'm</span></p>
-            ${receivedAmount !== null ? `<p><span>Naqd olingan:</span> <span>${receivedAmount.toLocaleString()} so'm</span></p>` : ''}
-            ${changeAmount !== null ? `<p><span>Qaytim:</span> <span>${changeAmount.toLocaleString()} so'm</span></p>` : ''}
-          </div>
-          <div class="footer"><p>Xaridingiz uchun rahmat!</p><p>SmartResto</p></div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  const printWindow = window.open('', '_blank', 'width=300,height=600');
-  if (printWindow) {
-    printWindow.document.write(receiptHTML);
-    printWindow.document.close();
-    printWindow.onload = () => {
-        setTimeout(() => {
-            printWindow.print();
-            setTimeout(() => {
-                 printWindow.close();
-            }, 500);
-        }, 250);
-    };
-    printWindow.focus();
-  } else {
-    toast.error("Chop etish oynasini ochib bo'lmadi. Brauzer bloklagan bo'lishi mumkin.");
-  }
-};
-
 // Rol tarjimalari
 const roleTranslations = {
   waiter: "Ofitsiant",
@@ -182,7 +94,6 @@ const translateRole = (roleName) => {
   if (!roleName || typeof roleName !== 'string') return "N/A";
   return roleTranslations[roleName.toLowerCase()] || roleName;
 };
-
 
 // Asosiy Komponent Wrapper (QueryClientProvider uchun)
 export default function AdminDashboardWrapper() {
@@ -231,19 +142,27 @@ function AdminDashboard() {
   const [showAddTableDialog, setShowAddTableDialog] = useState(false);
   const [showEditTableDialog, setShowEditTableDialog] = useState(false);
   const [showDeleteTableConfirmDialog, setShowDeleteTableConfirmDialog] = useState(false);
-  const [newTable, setNewTable] = useState({ name: "", zone: "", is_available: true });
-  const [editingTable, setEditingTable] = useState(null);
+  
+  const [showAddTableTypeDialog, setShowAddTableTypeDialog] = useState(false);
+  const [showEditTableTypeDialog, setShowEditTableTypeDialog] = useState(false);
+  const [showDeleteTableTypeConfirmDialog, setShowDeleteTableTypeConfirmDialog] = useState(false);
+  const [newTableType, setNewTableType] = useState({ name: "", service_fee_percent: "" });
+  const [editingTableType, setEditingTableType] = useState(null); 
+  const [tableTypeToDelete, setTableTypeToDelete] = useState(null); 
+  const [isAddingTableType, setIsAddingTableType] = useState(false);
+  const [isUpdatingTableType, setIsUpdatingTableType] = useState(false);
+  const [isDeletingTableType, setIsDeletingTableType] = useState(false);
+
+  const [newEmployee, setNewEmployee] = useState({ username: "", first_name: "", last_name: "", role_id: "", pin_code: "", is_active: true });
+  const [newRole, setNewRole] = useState({ name: "" });
+  const [newProduct, setNewProduct] = useState({ name: "", price: "", description: "", is_active: true, category_id: "", cost_price: "", image: null });
+  const [newTable, setNewTable] = useState({ name: "", zone: "", is_available: true, table_type_id: "" });
+  const [editingTable, setEditingTable] = useState(null); 
   const [tableToDelete, setTableToDelete] = useState(null);
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [isUpdatingTable, setIsUpdatingTable] = useState(false);
   const [isDeletingTable, setIsDeletingTable] = useState(false);
 
-  // Form States
-  const [newEmployee, setNewEmployee] = useState({ username: "", first_name: "", last_name: "", role_id: "", pin_code: "", is_active: true });
-  const [newRole, setNewRole] = useState({ name: "" });
-  const [newProduct, setNewProduct] = useState({ name: "", price: "", description: "", is_active: true, category_id: "", cost_price: "", image: null });
-
-  // Other States
   const [roleToDelete, setRoleToDelete] = useState(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isLoadingOrderDetails, setIsLoadingOrderDetails] = useState(false);
@@ -275,6 +194,8 @@ function AdminDashboard() {
         if (data && typeof data === 'object') {
           if (data.detail) {
             errorDetail = data.detail;
+          } else if (data.message && typeof data.message === 'string') { 
+            errorDetail = data.message;
           } else if (Array.isArray(data)) {
             errorDetail = data.map(err => typeof err === 'string' ? err : (err.field ? `${err.field}: ${err.message}` : JSON.stringify(err))).join('; ');
           } else {
@@ -284,6 +205,10 @@ function AdminDashboard() {
                 errorDetail = `Stol nomi: ${data.name.join(', ')}`;
             } else if (contextMessage.toLowerCase().includes('stol') && data.zone && Array.isArray(data.zone)) {
                  errorDetail = `Stol zonasi: ${data.zone.join(', ')}`;
+            } else if (contextMessage.toLowerCase().includes('stol turi') && data.name && Array.isArray(data.name)) { 
+                errorDetail = `Stol turi nomi: ${data.name.join(', ')}`;
+            } else if (contextMessage.toLowerCase().includes('stol turi') && data.service_fee_percent && Array.isArray(data.service_fee_percent)) { 
+                errorDetail = `Xizmat haqi foizi: ${data.service_fee_percent.join(', ')}`;
             } else {
                 errorDetail = Object.entries(data).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`).join('; ');
             }
@@ -329,13 +254,11 @@ function AdminDashboard() {
 
   // --- React Query Fetching ---
 
-  // 1. Asosiy ma'lumotlar uchun Query Function
   const fetchDashboardData = async () => {
     const headers = getAuthHeader(router);
     if (!headers) {
       throw new Error("Avtorizatsiya tokeni topilmadi.");
     }
-    // Sekin ishlashni kamaytirish uchun bir vaqtda so'rovlar jo'natish
     const results = await Promise.all([
         axios.get(`https://oshxonacopy.pythonanywhere.com/api/orders/`, { headers }),
         axios.get(`https://oshxonacopy.pythonanywhere.com/api/admin/dashboard/stats/`, { headers }),
@@ -348,29 +271,24 @@ function AdminDashboard() {
         axios.get(`https://oshxonacopy.pythonanywhere.com/api/admin/reports/customers/`, { headers }),
         axios.get(`https://oshxonacopy.pythonanywhere.com/api/admin/reports/charts/`, { headers }),
         axios.get(`https://oshxonacopy.pythonanywhere.com/api/admin/dashboard/sales-chart/`, { headers }),
-        axios.get(`https://oshxonacopy.pythonanywhere.com/api/tables/`, { headers })
+        axios.get(`https://oshxonacopy.pythonanywhere.com/api/tables/`, { headers }),
+        axios.get(`https://oshxonacopy.pythonanywhere.com/api/admin/table-types/`, { headers }) 
     ]);
 
     return results.map(res => res.data ?? null);
   };
 
-  // 2. Asosiy ma'lumotlar uchun useQuery hook (Polling bilan)
   const { data: dashboardDataArray, isLoading: isLoadingDashboard, error: dashboardError } = useQuery({
       queryKey: ['dashboardData', token],
       queryFn: fetchDashboardData,
       enabled: !!token && isClient,
-      // **** SEKIN ISHLASH BO'YICHA TAVSIYA: ****
-      // Agar har 10 soniyada yangilanish shart bo'lmasa, bu intervalni oshiring.
-      // Masalan: 30 soniya (30000) yoki 1 daqiqa (60000).
-      // Bu server va klientdagi yuklamani kamaytiradi.
-      refetchInterval: 10000, // Hozircha 10 soniya qoldirildi
-      staleTime: 5000, // 5 soniya cache
+      refetchInterval: 10000, 
+      staleTime: 5000, 
       onError: (err) => {
           handleApiError(err, "Asosiy ma'lumotlarni yuklashda");
       }
   });
 
-  // 3. Eng ko'p sotilgan mahsulotlar uchun Query Function
   const fetchTopProducts = async ({ queryKey }) => {
       const [_key, range, currentToken] = queryKey;
       if (!currentToken) throw new Error("Token required for top products");
@@ -383,18 +301,16 @@ function AdminDashboard() {
       return res.data ?? [];
   };
 
-  // 4. Eng ko'p sotilgan mahsulotlar uchun useQuery hook
   const { data: topProducts, isLoading: isLoadingTopProducts, error: topProductsError } = useQuery({
       queryKey: ['topProducts', dateRange, token],
       queryFn: fetchTopProducts,
       enabled: !!token && isClient,
-      staleTime: 60000, // 1 daqiqa cache
+      staleTime: 60000, 
       onError: (err) => {
            handleApiError(err, "Eng ko'p sotilgan mahsulotlarni yuklashda");
       }
   });
 
-  // 5. Sozlamalar uchun Query Function
   const fetchSettings = async ({ queryKey }) => {
       const [_key, currentToken] = queryKey;
       if (!currentToken) throw new Error("Token required for settings");
@@ -405,19 +321,17 @@ function AdminDashboard() {
       return res.data || {};
   };
 
-  // 6. Sozlamalar uchun useQuery hook
   const { data: settings, isLoading: isLoadingSettings, error: settingsError, refetch: refetchSettings } = useQuery({
       queryKey: ['settings', token],
       queryFn: fetchSettings,
       enabled: !!token && isClient && activeTab === "settings",
-      staleTime: 300000, // 5 daqiqa cache
+      staleTime: 300000, 
       refetchOnMount: true,
       onError: (err) => {
           console.error("Sozlamalarni yuklashda xatolik:", err);
       }
   });
 
-  // --- Ma'lumotlarni dashboardDataArray dan ajratib olish ---
   const ordersRaw = dashboardDataArray?.[0] ?? [];
   const stats = dashboardDataArray?.[1] ?? { todays_sales: { value: 0, change_percent: 0, comparison_period: "N/A" }, todays_orders: { value: 0, change_percent: 0, comparison_period: "N/A" }, average_check: { value: 0, change_percent: 0, comparison_period: "N/A" }, active_employees: { value: 0, change_absolute: 0, comparison_period: "N/A" } };
   const xodim = dashboardDataArray?.[2] ?? [];
@@ -433,8 +347,8 @@ function AdminDashboard() {
   const orderTypes = chartsData.order_types || [];
   const salesData = dashboardDataArray?.[10] ?? [];
   const tables = dashboardDataArray?.[11] ?? [];
+  const tableTypes = dashboardDataArray?.[12] ?? []; 
 
-  // Buyurtmalarni saralash va recentOrders ni olish
   const sortedOrders = Array.isArray(ordersRaw)
       ? [...ordersRaw].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       : [];
@@ -485,8 +399,134 @@ function AdminDashboard() {
     ).catch(err => console.error("Stol invalidatsiya xatosi:", err));
   };
 
-  // --- Action Handlers ---
-  // ... (Qolgan Action Handler funksiyalari o'zgarishsiz) ...
+  const refreshTableTypes = () => {
+     toast.promise(
+        queryClientHook.invalidateQueries({ queryKey: ['dashboardData'] }), 
+        { pending: 'Stol turlari yangilanmoqda...', success: 'Stol turlari ro\'yxati yangilandi!', error: 'Stol turlarini yangilashda xatolik!' }
+    ).catch(err => console.error("Stol turi invalidatsiya xatosi:", err));
+  };
+
+  // --- Chek Chop Etish Funksiyalari (YANGI / O'ZGARTIRILDI) ---
+
+  // MIJOZ CHEKINI CHOP ETISH (API ORQALI)
+  const printCustomerReceiptAPI = async (orderDetails) => {
+    if (!orderDetails || !orderDetails.id) {
+      toast.error("Mijoz chekini chop etish uchun buyurtma ma'lumotlari topilmadi!");
+      return;
+    }
+    const headers = getAuthHeader(router);
+    if (!headers) return;
+
+    const createdDate = new Date(orderDetails.created_at);
+    const payload = {
+      orderId: orderDetails.id,
+      orderDate: `${String(createdDate.getDate()).padStart(2, '0')}/${String(createdDate.getMonth() + 1).padStart(2, '0')}/${createdDate.getFullYear()}`,
+      orderTime: `${String(createdDate.getHours()).padStart(2, '0')}:${String(createdDate.getMinutes()).padStart(2, '0')}`,
+      orderTypeDisplay: orderDetails.order_type_display || 'N/A',
+      waiterName: orderDetails.created_by ? `${orderDetails.created_by.first_name || ''} ${orderDetails.created_by.last_name || ''}`.trim() : 'N/A',
+      customerDetails: {
+        tableName: orderDetails.table?.name || null,
+        customerName: orderDetails.customer_name || null,
+      },
+      items: (orderDetails.items || []).map(item => ({
+        productName: item.product_details?.name || 'Noma\'lum mahsulot',
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        totalItemPrice: item.total_price,
+      })),
+      subtotal: orderDetails.total_price,
+      serviceFeePercent: orderDetails.actual_service_fee_percent || orderDetails.service_fee_percent || "0.00",
+      serviceFeeAmount: (parseFloat(orderDetails.final_price || 0) - parseFloat(orderDetails.total_price || 0)).toFixed(2),
+      // taxPercent va taxAmount API hujjatida ixtiyoriy, hozircha 0 yuboramiz. Agar kerak bo'lsa sozlamalardan olinishi mumkin.
+      taxPercent: "0.00", 
+      taxAmount: "0.00",
+      finalPrice: orderDetails.final_price,
+      paymentMethodDisplay: orderDetails.payment ? getPaymentMethodDisplay(orderDetails.payment.method) : null,
+      paymentMethod: orderDetails.payment ? orderDetails.payment.method : null,
+      receivedAmount: orderDetails.payment?.received_amount,
+      changeAmount: orderDetails.payment?.change_amount,
+    };
+
+    if (!payload.items || payload.items.length === 0) {
+        toast.error("Chekda chop etish uchun mahsulotlar yo'q.");
+        return;
+    }
+    
+    toast.promise(
+      axios.post(`https://oshxonacopy.pythonanywhere.com/api/print/customer/`, payload, { headers })
+        .then(response => {
+          if (response.data && response.data.success) {
+            return response.data.message || "Mijoz cheki printerga yuborildi.";
+          } else {
+            throw new Error(response.data.message || "Mijoz chekini chop etishda noma'lum xatolik.");
+          }
+        }),
+      {
+        pending: `Buyurtma #${orderDetails.id} uchun mijoz cheki chop etilmoqda...`,
+        success: { render: ({ data }) => data },
+        error: {
+          render: ({ data }) => {
+            handleApiError(data, `Mijoz chekini (ID: ${orderDetails.id}) chop etishda`);
+            return "Mijoz chekini chop etishda xatolik!";
+          }
+        }
+      }
+    );
+  };
+
+  // OSHXONA CHEKINI CHOP ETISH (API ORQALI)
+  const printKitchenReceiptAPI = async (orderDetails, receiptType = "initial") => {
+    if (!orderDetails || !orderDetails.id) {
+      toast.error("Oshxona chekini chop etish uchun buyurtma ma'lumotlari topilmadi!");
+      return;
+    }
+    const headers = getAuthHeader(router);
+    if (!headers) return;
+
+    const createdDate = new Date(orderDetails.created_at);
+    const payload = {
+      orderId: orderDetails.id,
+      receiptType: receiptType, // "initial", "delta_added", "delta_cancelled"
+      tableName: orderDetails.table?.name || null,
+      orderTypeDisplay: orderDetails.order_type_display || 'N/A',
+      orderTime: `${String(createdDate.getHours()).padStart(2, '0')}:${String(createdDate.getMinutes()).padStart(2, '0')}`,
+      waiterName: orderDetails.created_by ? `${orderDetails.created_by.first_name || ''} ${orderDetails.created_by.last_name || ''}`.trim() : 'N/A',
+      items: (orderDetails.items || []).map(item => ({
+        productName: item.product_details?.name || 'Noma\'lum mahsulot',
+        quantity: item.quantity,
+        // "reason" faqat "delta_cancelled" uchun kerak
+      })),
+      orderComment: orderDetails.comment || null, // Agar orderDetails da comment bo'lsa
+    };
+
+    if (!payload.items || payload.items.length === 0) {
+        toast.error("Oshxona chekida chop etish uchun mahsulotlar yo'q.");
+        return;
+    }
+
+    toast.promise(
+      axios.post(`https://oshxonacopy.pythonanywhere.com/api/print/kitchen/`, payload, { headers })
+        .then(response => {
+          if (response.data && response.data.success) {
+            return response.data.message || "Oshxona cheki printerga yuborildi.";
+          } else {
+            throw new Error(response.data.message || "Oshxona chekini chop etishda noma'lum xatolik.");
+          }
+        }),
+      {
+        pending: `Buyurtma #${orderDetails.id} uchun oshxona cheki chop etilmoqda...`,
+        success: { render: ({ data }) => data },
+        error: {
+          render: ({ data }) => {
+            handleApiError(data, `Oshxona chekini (ID: ${orderDetails.id}) chop etishda`);
+            return "Oshxona chekini chop etishda xatolik!";
+          }
+        }
+      }
+    );
+  };
+  
+  // --- Action Handlers (Qolganlari o'zgarishsiz) ---
    const handleCancelOrder = async (orderId) => {
     const headers = getAuthHeader(router);
     if (!headers) return;
@@ -500,7 +540,7 @@ function AdminDashboard() {
         if (response.status === 200 || response.status === 204) {
           queryClientHook.invalidateQueries({ queryKey: ['dashboardData'] });
           if (showOrderDetailsModal && selectedOrderDetails?.id === orderId) {
-             handleShowOrderDetails(orderId); // Re-fetch modal data
+             handleShowOrderDetails(orderId); 
           }
           return `Buyurtma #${orderId} muvaffaqiyatli bekor qilindi!`;
         } else {
@@ -1229,6 +1269,163 @@ function AdminDashboard() {
         setIsDeletingCategory(false);
     });
   };
+  
+  const handleAddTableType = async () => {
+    if (!newTableType.name || newTableType.name.trim() === "") {
+      toast.error("Iltimos, stol turi nomini kiriting.");
+      return;
+    }
+    if (!newTableType.service_fee_percent || isNaN(parseFloat(newTableType.service_fee_percent))) {
+      toast.error("Iltimos, xizmat haqi foizini raqamda kiriting.");
+      return;
+    }
+    const fee = parseFloat(newTableType.service_fee_percent);
+    if (fee < 0 || fee > 100) {
+      toast.error("Xizmat haqi foizi 0 dan 100 gacha bo'lishi kerak.");
+      return;
+    }
+
+    const headers = getAuthHeader(router);
+    if (!headers) return;
+
+    const tableTypeData = {
+        name: newTableType.name.trim(),
+        service_fee_percent: parseFloat(newTableType.service_fee_percent).toFixed(2),
+    };
+    setIsAddingTableType(true);
+
+    toast.promise(
+        axios.post("https://oshxonacopy.pythonanywhere.com/api/admin/table-types/", tableTypeData, { headers })
+            .then(response => {
+                if (response.status === 201) {
+                    refreshTableTypes(); 
+                    setNewTableType({ name: "", service_fee_percent: "" });
+                    setShowAddTableTypeDialog(false);
+                    return `Stol turi "${tableTypeData.name}" muvaffaqiyatli qo'shildi!`;
+                } else {
+                    throw new Error(`Stol turi qo'shishda kutilmagan javob: ${response.status}`);
+                }
+            }),
+        {
+            pending: 'Stol turi qo\'shilmoqda...',
+            success: { render({ data }) { return data; } },
+            error: { render({ data }) { handleApiError(data, "Stol turi qo'shishda"); return "Stol turi qo'shishda xatolik!"; } }
+        }
+    ).finally(() => {
+        setIsAddingTableType(false);
+    });
+  };
+
+  const handleEditTableTypeClick = (tableType) => {
+      if (!tableType || !tableType.id) {
+          toast.error("Stol turini tahrirlash uchun ID topilmadi.");
+          return;
+      }
+      setEditingTableType({
+          id: tableType.id,
+          name: tableType.name || '',
+          service_fee_percent: tableType.service_fee_percent || ''
+      });
+      setShowEditTableTypeDialog(true);
+  };
+
+  const handleUpdateTableType = async () => {
+    if (!editingTableType || !editingTableType.id) {
+        toast.error("Tahrirlanayotgan stol turi ma'lumotlari topilmadi.");
+        return;
+    }
+    if (!editingTableType.name || editingTableType.name.trim() === "") {
+      toast.error("Iltimos, stol turi nomini kiriting.");
+      return;
+    }
+    if (!editingTableType.service_fee_percent || isNaN(parseFloat(editingTableType.service_fee_percent))) {
+      toast.error("Iltimos, xizmat haqi foizini raqamda kiriting.");
+      return;
+    }
+    const fee = parseFloat(editingTableType.service_fee_percent);
+    if (fee < 0 || fee > 100) {
+      toast.error("Xizmat haqi foizi 0 dan 100 gacha bo'lishi kerak.");
+      return;
+    }
+
+    const headers = getAuthHeader(router);
+    if (!headers) return;
+
+    const updateData = {
+        name: editingTableType.name.trim(),
+        service_fee_percent: parseFloat(editingTableType.service_fee_percent).toFixed(2),
+    };
+    const tableTypeId = editingTableType.id;
+    const tableTypeName = updateData.name;
+    setIsUpdatingTableType(true);
+
+    toast.promise(
+      axios.put(`https://oshxonacopy.pythonanywhere.com/api/admin/table-types/${tableTypeId}/`, updateData, { headers })
+        .then(response => {
+          if (response.status === 200) {
+            refreshTableTypes(); 
+            setShowEditTableTypeDialog(false);
+            setEditingTableType(null);
+            return `Stol turi "${tableTypeName}" muvaffaqiyatli yangilandi!`;
+          } else {
+            throw new Error(`Stol turini yangilashda kutilmagan javob: ${response.status}`);
+          }
+        }),
+      {
+        pending: 'Stol turi yangilanmoqda...',
+        success: { render({ data }) { return data; } },
+        error: { render({ data }) { handleApiError(data, `Stol turi #${tableTypeId} ("${tableTypeName}") ni yangilashda`); return "Stol turini yangilashda xatolik!"; }}
+      }
+    ).finally(() => {
+        setIsUpdatingTableType(false);
+    });
+  };
+
+  const handleDeleteTableTypeClick = (tableType) => {
+      if (!tableType || !tableType.id) {
+          toast.error("Stol turini o'chirish uchun ID topilmadi.");
+          return;
+      }
+      setTableTypeToDelete({ id: tableType.id, name: tableType.name });
+      setShowDeleteTableTypeConfirmDialog(true);
+  };
+
+  const confirmDeleteTableType = async () => {
+    if (!tableTypeToDelete || !tableTypeToDelete.id) return;
+
+    const headers = getAuthHeader(router);
+    if (!headers) return;
+
+    const tableTypeId = tableTypeToDelete.id;
+    const tableTypeName = tableTypeToDelete.name;
+    setIsDeletingTableType(true);
+
+    toast.promise(
+        axios.delete(
+            `https://oshxonacopy.pythonanywhere.com/api/admin/table-types/${tableTypeId}/`,
+            { headers }
+        ).then(response => {
+            if (response.status === 204) {
+                refreshTableTypes();
+                return `Stol turi "${tableTypeName}" (ID: ${tableTypeId}) muvaffaqiyatli o'chirildi!`;
+            } else {
+                throw new Error(`Stol turini o'chirishda kutilmagan javob: ${response.status}`);
+            }
+        }),
+        {
+            pending: 'Stol turi o\'chirilmoqda...',
+            success: { render({ data }) { return data; } },
+            error: { render({ data }) {
+                 handleApiError(data, `Stol turi "${tableTypeName}" (ID: ${tableTypeId}) ni o'chirishda`);
+                 return `Stol turini o'chirishda xatolik! Agar bu stol turiga bog'liq stollar mavjud bo'lsa, o'chirish mumkin emas.`;
+            }}
+        }
+    ).finally(() => {
+        setShowDeleteTableTypeConfirmDialog(false);
+        setTableTypeToDelete(null);
+        setIsDeletingTableType(false);
+    });
+  };
 
   const handleAddTable = async () => {
     if (!newTable.name || newTable.name.trim() === "") {
@@ -1243,6 +1440,10 @@ function AdminDashboard() {
         toast.error("Zona nomi 50 belgidan oshmasligi kerak.");
         return;
     }
+    if (!newTable.table_type_id) {
+        toast.error("Iltimos, stol turini tanlang.");
+        return;
+    }
 
     const headers = getAuthHeader(router);
     if (!headers) return;
@@ -1251,6 +1452,7 @@ function AdminDashboard() {
         name: newTable.name.trim(),
         zone: newTable.zone?.trim() || null,
         is_available: newTable.is_available,
+        table_type_id: parseInt(newTable.table_type_id), 
     };
     setIsAddingTable(true);
 
@@ -1258,8 +1460,8 @@ function AdminDashboard() {
         axios.post("https://oshxonacopy.pythonanywhere.com/api/tables/", tableData, { headers })
             .then(response => {
                 if (response.status === 201) {
-                    queryClientHook.invalidateQueries({ queryKey: ['dashboardData'] });
-                    setNewTable({ name: "", zone: "", is_available: true });
+                    refreshTables(); 
+                    setNewTable({ name: "", zone: "", is_available: true, table_type_id: "" });
                     setShowAddTableDialog(false);
                     return `Stol "${tableData.name}" muvaffaqiyatli qo'shildi!`;
                 } else {
@@ -1285,7 +1487,8 @@ function AdminDashboard() {
           id: table.id,
           name: table.name || '',
           zone: table.zone || '',
-          is_available: table.is_available ?? true
+          is_available: table.is_available ?? true,
+          table_type_id: table.table_type?.id?.toString() || "" 
       });
       setShowEditTableDialog(true);
   };
@@ -1307,6 +1510,10 @@ function AdminDashboard() {
         toast.error("Zona nomi 50 belgidan oshmasligi kerak.");
         return;
     }
+    if (!editingTable.table_type_id) {
+        toast.error("Iltimos, stol turini tanlang.");
+        return;
+    }
 
     const headers = getAuthHeader(router);
     if (!headers) return;
@@ -1315,6 +1522,7 @@ function AdminDashboard() {
         name: editingTable.name.trim(),
         zone: editingTable.zone?.trim() || null,
         is_available: editingTable.is_available,
+        table_type_id: parseInt(editingTable.table_type_id), 
     };
     const tableId = editingTable.id;
     const tableName = updateData.name;
@@ -1324,7 +1532,7 @@ function AdminDashboard() {
       axios.put(`https://oshxonacopy.pythonanywhere.com/api/tables/${tableId}/`, updateData, { headers })
         .then(response => {
           if (response.status === 200) {
-             queryClientHook.invalidateQueries({ queryKey: ['dashboardData'] });
+             refreshTables(); 
             setShowEditTableDialog(false);
             setEditingTable(null);
             return `Stol "${tableName}" muvaffaqiyatli yangilandi!`;
@@ -1407,6 +1615,7 @@ function AdminDashboard() {
   const validProductReportData = safeArray(productReportData);
   const validCustomerReport = safeArray(customerReport);
   const validTables = safeArray(tables);
+  const validTableTypes = safeArray(tableTypes); 
 
   if (!isClient || !token || (isLoadingDashboard && !dashboardDataArray)) {
     if (typeof window !== 'undefined' && window.location.pathname === '/auth') {
@@ -1436,7 +1645,6 @@ function AdminDashboard() {
        );
   }
 
-  // Main authenticated content
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-950">
       <ToastContainer
@@ -1444,7 +1652,6 @@ function AdminDashboard() {
         closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="colored"
       />
 
-        {/* Sidebar JSX */}
         <aside className="hidden w-64 flex-col bg-slate-900 text-white md:flex dark:bg-slate-800">
             <div className="flex h-14 items-center border-b border-slate-700 px-4 dark:border-slate-600">
             <Store className="mr-2 h-6 w-6 text-sky-400" />
@@ -1462,6 +1669,7 @@ function AdminDashboard() {
                 <Button variant={activeTab === "products" ? "secondary" : "ghost"} className={`w-full justify-start ${activeTab === 'products' ? 'bg-slate-700 dark:bg-slate-600 text-white' : 'hover:bg-slate-700/50 dark:hover:bg-slate-700 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab("products")}><Package className="mr-2 h-4 w-4" />Mahsulotlar</Button>
                 <Button variant={activeTab === "categories" ? "secondary" : "ghost"} className={`w-full justify-start ${activeTab === 'categories' ? 'bg-slate-700 dark:bg-slate-600 text-white' : 'hover:bg-slate-700/50 dark:hover:bg-slate-700 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab("categories")}><LayoutGrid className="mr-2 h-4 w-4" />Kategoriyalar</Button>
                 <Button variant={activeTab === "tables" ? "secondary" : "ghost"} className={`w-full justify-start ${activeTab === 'tables' ? 'bg-slate-700 dark:bg-slate-600 text-white' : 'hover:bg-slate-700/50 dark:hover:bg-slate-700 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab("tables")}><Armchair className="mr-2 h-4 w-4" />Stollar</Button>
+                <Button variant={activeTab === "table-types" ? "secondary" : "ghost"} className={`w-full justify-start ${activeTab === 'table-types' ? 'bg-slate-700 dark:bg-slate-600 text-white' : 'hover:bg-slate-700/50 dark:hover:bg-slate-700 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab("table-types")}><Sliders className="mr-2 h-4 w-4" />Stol Turlari</Button>
                 </div>
                 <h2 className="mb-2 mt-6 px-4 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Tizim</h2>
                 <div className="space-y-1">
@@ -1478,7 +1686,6 @@ function AdminDashboard() {
             </div>
         </aside>
 
-        {/* Mobile Sidebar (Overlay) */}
         {showMobileSidebar && (
             <div className="fixed inset-0 z-50 md:hidden" onClick={() => setShowMobileSidebar(false)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true"></div>
@@ -1500,6 +1707,7 @@ function AdminDashboard() {
                         { name: 'products', label: 'Mahsulotlar', icon: Package },
                         { name: 'categories', label: 'Kategoriyalar', icon: LayoutGrid },
                         { name: 'tables', label: 'Stollar', icon: Armchair },
+                        { name: 'table-types', label: 'Stol Turlari', icon: Sliders }, 
                     ].map(item => (
                         <Button key={item.name} variant={activeTab === item.name ? "secondary" : "ghost"} className={`w-full justify-start ${activeTab === item.name ? 'bg-slate-700 dark:bg-slate-600 text-white' : 'hover:bg-slate-700/50 dark:hover:bg-slate-700 text-slate-300 hover:text-white'}`} onClick={() => { setActiveTab(item.name); setShowMobileSidebar(false) }}><item.icon className="mr-2 h-4 w-4" />{item.label}</Button>
                     ))}
@@ -1519,9 +1727,7 @@ function AdminDashboard() {
             </div>
         )}
 
-      {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header JSX */}
         <header className="flex h-14 items-center justify-between border-b bg-white px-4 dark:bg-slate-900 dark:border-slate-700">
           <div className="flex items-center gap-2 md:hidden">
             <Button variant="ghost" size="icon" onClick={() => setShowMobileSidebar(true)}><Menu className="h-6 w-6" /></Button>
@@ -1546,13 +1752,9 @@ function AdminDashboard() {
           </div>
         </header>
 
-        {/* Main Content Body (Scrollable) */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8 bg-slate-100 dark:bg-slate-950">
-          {/* Barcha Tab kontentlari shu yerda */}
-            {/* Dashboard Tab */}
             {activeTab === "dashboard" && (
                 <div className="grid gap-4 md:gap-6 lg:grid-cols-4">
-                {/* Dashboard Cards */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Bugungi savdo</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader>
                     <CardContent>
@@ -1590,7 +1792,6 @@ function AdminDashboard() {
                     </CardContent>
                 </Card>
 
-                {/* Savdo dinamikasi */}
                 <Card className="col-span-full lg:col-span-2">
                     <CardHeader><CardTitle>Savdo dinamikasi (Oxirgi 7 kun)</CardTitle></CardHeader>
                     <CardContent className="pl-2 pr-4">
@@ -1634,7 +1835,6 @@ function AdminDashboard() {
                     </CardContent>
                 </Card>
 
-                {/* Eng ko'p sotilganlar (Dashboard) */}
                 <Card className="col-span-full lg:col-span-2">
                     <CardHeader className="flex flex-row items-center justify-between pb-4">
                         <CardTitle className="text-base font-semibold">Eng ko'p sotilganlar</CardTitle>
@@ -1686,7 +1886,6 @@ function AdminDashboard() {
                     </CardContent>
                 </Card>
 
-                {/* So'nggi buyurtmalar */}
                 <Card className="col-span-full">
                     <CardHeader className="flex flex-row items-center justify-between">
                     <div>
@@ -1747,8 +1946,9 @@ function AdminDashboard() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => handleShowOrderDetails(order.id)}>Batafsil</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => printReceipt(orders.find(o => o.id === order.id) || order)} disabled={!orders.find(o => o.id === order.id)}>
-                                            Chek chop etish
+                                        {/* O'ZGARTIRILDI: Mijoz chekini API orqali chop etish */}
+                                        <DropdownMenuItem onClick={() => printCustomerReceiptAPI(orders.find(o => o.id === order.id) || order)} disabled={!orders.find(o => o.id === order.id)}>
+                                            Mijoz chekini chiqarish
                                         </DropdownMenuItem>
                                         {(order.status === 'pending' || order.status === 'processing' || order.status === 'ready' || order.status === 'new' || order.status === 'preparing') && (
                                         <DropdownMenuItem
@@ -1793,8 +1993,6 @@ function AdminDashboard() {
                 </Card>
                 </div>
             )}
-            {/* ... Boshqa Tablar ... */}
-             {/* Orders Tab */}
             {activeTab === "orders" && (
                 <div className="space-y-6">
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -1858,8 +2056,9 @@ function AdminDashboard() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => handleShowOrderDetails(order.id)}>Batafsil</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => printReceipt(order)} disabled={!order}>
-                                            Chek chop etish
+                                        {/* O'ZGARTIRILDI: Mijoz chekini API orqali chop etish */}
+                                        <DropdownMenuItem onClick={() => printCustomerReceiptAPI(order)} disabled={!order}>
+                                            Mijoz chekini chiqarish
                                         </DropdownMenuItem>
                                         {(order.status === 'pending' || order.status === 'processing' || order.status === 'ready' || order.status === 'new' || order.status === 'preparing') && (
                                             <DropdownMenuItem
@@ -1893,7 +2092,6 @@ function AdminDashboard() {
                 </div>
             )}
 
-             {/* Products Tab */}
             {activeTab === "products" && (
                 <div className="space-y-6">
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -1987,7 +2185,6 @@ function AdminDashboard() {
                 </div>
             )}
 
-             {/* Employees Tab */}
             {activeTab === "employees" && (
                 <div className="space-y-6">
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -2066,7 +2263,6 @@ function AdminDashboard() {
                 </div>
             )}
 
-            {/* Roles Tab */}
             {activeTab === "roles" && (
                 <div className="space-y-6">
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -2141,7 +2337,6 @@ function AdminDashboard() {
                 </div>
             )}
 
-            {/* Categories Tab */}
             {activeTab === "categories" && (
                 <div className="space-y-6">
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -2212,7 +2407,6 @@ function AdminDashboard() {
                 </div>
             )}
 
-             {/* Tables Tab */}
             {activeTab === "tables" && (
                 <div className="space-y-6">
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -2230,7 +2424,7 @@ function AdminDashboard() {
                 <Card>
                     <CardHeader>
                     <CardTitle>Stollar ro'yxati</CardTitle>
-                    <CardDescription>Restorandagi barcha stollar va ularning holati.</CardDescription>
+                    <CardDescription>Restorandagi barcha stollar, ularning turlari va holati.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
                     <Table>
@@ -2239,19 +2433,27 @@ function AdminDashboard() {
                             <TableHead className="w-[80px]">ID</TableHead>
                             <TableHead>Nomi/Raqami</TableHead>
                             <TableHead className="hidden sm:table-cell">Zona</TableHead>
+                            <TableHead className="hidden md:table-cell">Stol Turi (Xizmat %)</TableHead>
                             <TableHead className="text-right">Holati</TableHead>
                             <TableHead className="text-right w-[100px]">Amallar</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
                         {isLoadingDashboard && validTables.length === 0 ? (
-                            <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-sky-500" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-sky-500" /></TableCell></TableRow>
                         ) : validTables.length > 0 ? (
                             validTables.map((table) => (
                                 <TableRow key={table.id}>
                                 <TableCell className="font-medium">{table.id}</TableCell>
                                 <TableCell>{table.name || "Noma'lum"}</TableCell>
                                 <TableCell className="hidden sm:table-cell">{table.zone || "N/A"}</TableCell>
+                                <TableCell className="hidden md:table-cell">
+                                    {table.table_type ? (
+                                        `${table.table_type.name} (${parseFloat(table.table_type.service_fee_percent || 0).toFixed(2)}%)`
+                                    ) : (
+                                        <span className="text-muted-foreground">Belgilanmagan</span>
+                                    )}
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <Badge variant={table.is_available ? "success" : "warning"}>
                                     {table.is_available ? "Bo'sh" : "Band"}
@@ -2279,7 +2481,7 @@ function AdminDashboard() {
                             ))
                         ) : (
                             <TableRow>
-                            <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                 Stollar topilmadi.
                             </TableCell>
                             </TableRow>
@@ -2290,8 +2492,79 @@ function AdminDashboard() {
                 </Card>
                 </div>
             )}
+            
+            {activeTab === "table-types" && (
+                <div className="space-y-6">
+                <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                    <h2 className="text-2xl font-bold tracking-tight">Stol Turlari</h2>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" onClick={refreshTableTypes} disabled={isLoadingDashboard}>
+                        {isLoadingDashboard ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Paperclip className="mr-2 h-4 w-4"/>}
+                        Yangilash
+                        </Button>
+                        <Button onClick={() => setShowAddTableTypeDialog(true)}>
+                        <Plus className="mr-2 h-4 w-4" /> Yangi stol turi qo'shish
+                        </Button>
+                    </div>
+                </div>
+                <Card>
+                    <CardHeader>
+                    <CardTitle>Stol turlari ro'yxati</CardTitle>
+                    <CardDescription>Restorandagi har bir stol turiga biriktirilgan xizmat haqi foizlari.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[80px]">ID</TableHead>
+                            <TableHead>Stol Turi Nomi</TableHead>
+                            <TableHead className="text-right">Xizmat Haqi (%)</TableHead>
+                            <TableHead className="text-right w-[100px]">Amallar</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {isLoadingDashboard && validTableTypes.length === 0 ? (
+                            <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-sky-500" /></TableCell></TableRow>
+                        ) : validTableTypes.length > 0 ? (
+                            validTableTypes.map((tableType) => (
+                                <TableRow key={tableType.id}>
+                                <TableCell className="font-medium">{tableType.id}</TableCell>
+                                <TableCell>{tableType.name || "Noma'lum"}</TableCell>
+                                <TableCell className="text-right">{parseFloat(tableType.service_fee_percent || 0).toFixed(2)}%</TableCell>
+                                <TableCell className="text-right">
+                                    <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <ChevronDown className="h-4 w-4" />
+                                        <span className="sr-only">Amallar</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleEditTableTypeClick(tableType)}>
+                                        <Edit className="mr-2 h-4 w-4" /> Tahrirlash
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleDeleteTableTypeClick(tableType)} className="text-red-600 focus:text-red-700 focus:bg-red-100 dark:focus:bg-red-900/50 dark:focus:text-red-400">
+                                        <Trash2 className="mr-2 h-4 w-4" /> O'chirish
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                            <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                Stol turlari topilmadi.
+                            </TableCell>
+                            </TableRow>
+                        )}
+                        </TableBody>
+                    </Table>
+                    </CardContent>
+                </Card>
+                </div>
+            )}
 
-            {/* Reports Tab */}
             {activeTab === "reports" && (
                 <div className="space-y-6">
                 <h2 className="text-2xl font-bold tracking-tight">Hisobotlar</h2>
@@ -2303,7 +2576,6 @@ function AdminDashboard() {
                     <TabsTrigger value="charts">Diagrammalar</TabsTrigger>
                     </TabsList>
 
-                    {/* Reports > Employees */}
                     <TabsContent value="employees" className="space-y-4">
                     <Card>
                         <CardHeader>
@@ -2345,7 +2617,6 @@ function AdminDashboard() {
                     </Card>
                     </TabsContent>
 
-                    {/* Reports > Products */}
                     <TabsContent value="products" className="space-y-4">
                     <Card>
                         <CardHeader>
@@ -2387,7 +2658,6 @@ function AdminDashboard() {
                     </Card>
                     </TabsContent>
 
-                    {/* Reports > Customers */}
                     <TabsContent value="customers" className="space-y-4">
                     <Card>
                         <CardHeader>
@@ -2429,7 +2699,6 @@ function AdminDashboard() {
                     </Card>
                     </TabsContent>
 
-                    {/* Reports > Charts */}
                     <TabsContent value="charts" className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2">
                         <Card>
@@ -2524,7 +2793,6 @@ function AdminDashboard() {
                 </div>
             )}
 
-             {/* Settings Tab */}
             {activeTab === "settings" && (
                 <div className="space-y-6">
                 <h2 className="text-2xl font-bold tracking-tight">Sozlamalar</h2>
@@ -2627,7 +2895,7 @@ function AdminDashboard() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="settings-service_fee_percent">Xizmat haqi (%)</Label>
+                                <Label htmlFor="settings-service_fee_percent">Global Xizmat Haqi (%) (eski)</Label>
                                 <Input
                                 id="settings-service_fee_percent"
                                 type="number"
@@ -2637,7 +2905,9 @@ function AdminDashboard() {
                                 min="0"
                                 max="100"
                                 step="0.1"
+                                title="Bu global sozlama, xizmat haqi endi asosan stol turiga qarab belgilanadi."
                                 />
+                                <p className="text-xs text-muted-foreground">Eslatma: Xizmat haqi endi asosan stol turiga qarab belgilanadi.</p>
                             </div>
                         </div>
 
@@ -2655,9 +2925,7 @@ function AdminDashboard() {
         </main>
       </div>
 
-      {/* --- Dialogs --- */}
-
-      {/* Add Employee Dialog */}
+      {/* Dialogs */}
       <Dialog open={showAddEmployeeDialog} onOpenChange={setShowAddEmployeeDialog}>
         <DialogContent className="sm:max-w-[425px]">
          <form onSubmit={(e) => { e.preventDefault(); handleAddEmployee(); }}>
@@ -2704,7 +2972,6 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-       {/* Edit Employee Dialog */}
        <Dialog open={showEditEmployeeDialog} onOpenChange={setShowEditEmployeeDialog}>
         <DialogContent className="sm:max-w-[425px]">
          <form onSubmit={(e) => { e.preventDefault(); handleUpdateEmployee(); }}>
@@ -2754,8 +3021,6 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-
-      {/* Add Role Dialog */}
       <Dialog open={showAddRoleDialog} onOpenChange={setShowAddRoleDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <form onSubmit={(e) => { e.preventDefault(); handleAddRole(); }}>
@@ -2777,7 +3042,6 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Role Confirmation Dialog */}
       <Dialog open={isDeleteRoleConfirmOpen} onOpenChange={setIsDeleteRoleConfirmOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -2794,7 +3058,6 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Product Dialog */}
       <Dialog open={showAddProductDialog} onOpenChange={setShowAddProductDialog}>
         <DialogContent className="sm:max-w-[425px]">
          <form onSubmit={(e) => { e.preventDefault(); handleAddProduct(); }}>
@@ -2845,7 +3108,6 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Product Dialog */}
       <Dialog open={showEditProductDialog} onOpenChange={setShowEditProductDialog}>
         <DialogContent className="sm:max-w-[425px]">
          <form onSubmit={(e) => { e.preventDefault(); handleUpdateProduct(); }}>
@@ -2903,19 +3165,13 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* ========================================================== */}
-      {/* ------ ORDER DETAILS MODAL - Layout Tuzatildi ------ */}
-      {/* ========================================================== */}
+      {/* O'ZGARTIRILDI: Buyurtma tafsilotlari modaliga "Oshxona cheki" va "Mijoz cheki" tugmalari qo'shildi */}
       <Dialog open={showOrderDetailsModal} onOpenChange={handleModalClose}>
-        {/* **** Layout uchun `flex flex-col` va `max-h` qo'shildi **** */}
-        <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-[900px] max-h-[90vh] flex flex-col p-0"> {/* Padding olib tashlandi */}
-          {/* **** flex-shrink-0 header qotib qolishi uchun **** */}
-          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4 border-b"> {/* Padding va border qo'shildi */}
+        <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-[900px] max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4 border-b">
             <DialogTitle>Buyurtma #{selectedOrderDetails?.id || '...'}</DialogTitle>
             <DialogDescription>Buyurtma haqida batafsil ma'lumot.</DialogDescription>
           </DialogHeader>
-
-          {/* **** ScrollArea endi faqat asosiy kontentni o'raydi va flex-grow bilan bo'sh joyni egallaydi **** */}
           <ScrollArea className="flex-grow overflow-y-auto px-6 py-4">
             {isLoadingOrderDetails ? (
                 <div className="flex items-center justify-center h-40">
@@ -2933,30 +3189,35 @@ function AdminDashboard() {
                     )}
                 </div>
             ) : selectedOrderDetails ? (
-                <div className="space-y-5"> {/* Kontent orasida masofa */}
-                    {/* Asosiy ma'lumotlar */}
+                <div className="space-y-5">
                     <div>
                         <h3 className="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-200">Asosiy ma'lumotlar</h3>
                         <div className="grid gap-x-4 gap-y-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                             {/* ... (o'zgarishsiz) ... */}
                             <div><p className="text-xs text-muted-foreground">ID</p><p className="text-sm font-medium">{selectedOrderDetails.id}</p></div>
                             <div><p className="text-xs text-muted-foreground">Buyurtma turi</p><p className="text-sm font-medium">{selectedOrderDetails.order_type_display || selectedOrderDetails.order_type || 'N/A'}</p></div>
                             <div><p className="text-xs text-muted-foreground">Holat</p><Badge variant={ selectedOrderDetails.status === 'paid' || selectedOrderDetails.status === 'completed' ? 'success' : selectedOrderDetails.status === 'cancelled' ? 'destructive' : selectedOrderDetails.status === 'pending' ? 'warning' : selectedOrderDetails.status === 'ready' || selectedOrderDetails.status === 'preparing' ? 'info' : selectedOrderDetails.status === 'new' ? 'secondary' : 'outline' } className="text-sm px-2.5 py-0.5">{selectedOrderDetails.status_display || selectedOrderDetails.status || 'N/A'}</Badge></div>
                             <div><p className="text-xs text-muted-foreground">Mijoz</p><p className="text-sm font-medium">{selectedOrderDetails.customer_name || 'Noma\'lum'}</p></div>
                             {selectedOrderDetails.customer_phone && (<div><p className="text-xs text-muted-foreground">Telefon</p><p className="text-sm font-medium">{selectedOrderDetails.customer_phone}</p></div>)}
                             {selectedOrderDetails.customer_address && (<div className="lg:col-span-2"><p className="text-xs text-muted-foreground">Manzil</p><p className="text-sm font-medium">{selectedOrderDetails.customer_address}</p></div>)}
-                            {selectedOrderDetails.table && (<div><p className="text-xs text-muted-foreground">Stol</p><p className="text-sm font-medium">{selectedOrderDetails.table.name || 'Noma\'lum'} {selectedOrderDetails.table.zone ? `(${selectedOrderDetails.table.zone})` : ''}</p></div>)}
+                            {selectedOrderDetails.table && (
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Stol</p>
+                                    <p className="text-sm font-medium">
+                                        {selectedOrderDetails.table.name || 'Noma\'lum'}
+                                        {selectedOrderDetails.table.zone ? ` (${selectedOrderDetails.table.zone})` : ''}
+                                        {selectedOrderDetails.table.table_type?.name ? ` [${selectedOrderDetails.table.table_type.name}]` : ''}
+                                    </p>
+                                </div>
+                            )}
                             <div><p className="text-xs text-muted-foreground">Yaratilgan vaqt</p><p className="text-sm font-medium">{new Date(selectedOrderDetails.created_at).toLocaleString('uz-UZ', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p></div>
                             <div><p className="text-xs text-muted-foreground">Yangilangan vaqt</p><p className="text-sm font-medium">{new Date(selectedOrderDetails.updated_at).toLocaleString('uz-UZ', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p></div>
                             {selectedOrderDetails.created_by && (<div className="lg:col-span-full"><p className="text-xs text-muted-foreground">Xodim (Yaratgan)</p><p className="text-sm font-medium">{selectedOrderDetails.created_by.first_name || ''}{' '}{selectedOrderDetails.created_by.last_name || ''}{selectedOrderDetails.created_by.username ? ` (${selectedOrderDetails.created_by.username})` : ''}{selectedOrderDetails.created_by.role?.name ? ` [${translateRole(selectedOrderDetails.created_by.role.name)}]` : ''}</p></div>)}
                         </div>
                     </div>
-                    {/* To'lov tafsilotlari */}
                     {selectedOrderDetails.payment ? (<>
                         <div>
                             <h3 className="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-200">To'lov tafsilotlari</h3>
                             <div className="grid gap-x-4 gap-y-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                                {/* ... (o'zgarishsiz) ... */}
                                 <div><p className="text-xs text-muted-foreground">To'lov ID</p><p className="text-sm font-medium">{selectedOrderDetails.payment.id}</p></div>
                                 <div><p className="text-xs text-muted-foreground">To'lov usuli</p><p className="text-sm font-medium">{getPaymentMethodDisplay(selectedOrderDetails.payment.method)}</p></div>
                                 <div><p className="text-xs text-muted-foreground">To'langan summa</p><p className="text-sm font-medium">{(parseFloat(selectedOrderDetails.payment.amount || 0)).toLocaleString()} so'm</p></div>
@@ -2968,13 +3229,17 @@ function AdminDashboard() {
                             </div>
                         </div>
                     </>) : (<><div><h3 className="text-lg font-semibold mb-2 text-slate-800 dark:text-slate-200">To'lov</h3><p className="text-sm text-muted-foreground">Bu buyurtma uchun to'lov ma'lumotlari mavjud emas.</p></div></>)}
-                     {/* Mahsulotlar jadvali */}
                      <div>
                         <h3 className="text-lg font-semibold mb-3 text-slate-800 dark:text-slate-200">Mahsulotlar</h3>
                         <div className="overflow-x-auto rounded-md border">
                             <Table>
                                 <TableHeader>
-                                    <TableRow><TableHead className="w-[50%] sm:w-[60%]">Mahsulot</TableHead><TableHead className="text-right w-[15%] sm:w-[10%]">Miqdor</TableHead><TableHead className="text-right w-[20%] sm:w-[15%]">Narx</TableHead><TableHead className="text-right w-[15%] sm:w-[15%]">Jami</TableHead></TableRow>
+                                    <TableRow>
+                                        <TableHead className="w-[50%] sm:w-[60%]">Mahsulot</TableHead>
+                                        <TableHead className="text-right w-[15%] sm:w-[10%]">Miqdor</TableHead>
+                                        <TableHead className="text-right w-[20%] sm:w-[15%]">Narx</TableHead>
+                                        <TableHead className="text-right w-[15%] sm:w-[15%]">Jami</TableHead>
+                                    </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {(Array.isArray(selectedOrderDetails.items) && selectedOrderDetails.items.length > 0) ? (selectedOrderDetails.items.map((item) => (
@@ -2995,15 +3260,20 @@ function AdminDashboard() {
                             </Table>
                         </div>
                     </div>
-                    {/* **** Hisob-kitob bloki endi ScrollArea ichida **** */}
                      <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-md space-y-2 border dark:border-slate-700">
                          <h4 className="text-base font-semibold mb-2 text-slate-700 dark:text-slate-300">Hisob-kitob</h4>
                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Mahsulotlar jami:</span><span className="font-medium">{(parseFloat(selectedOrderDetails.total_price || 0)).toLocaleString()} so'm</span></div>
-                         {parseFloat(selectedOrderDetails.service_fee_percent || 0) > 0 && (<div className="flex justify-between text-sm"><span className="text-muted-foreground">Xizmat haqi ({selectedOrderDetails.service_fee_percent}%):</span><span className="font-medium">+ {((parseFloat(selectedOrderDetails.total_price || 0)) * (parseFloat(selectedOrderDetails.service_fee_percent || 0) / 100)).toLocaleString()} so'm</span></div>)}
+                         {(parseFloat(selectedOrderDetails.actual_service_fee_percent || selectedOrderDetails.service_fee_percent || 0)) > 0 && (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Xizmat haqi ({selectedOrderDetails.actual_service_fee_percent || selectedOrderDetails.service_fee_percent || 0}%):</span>
+                                <span className="font-medium">
+                                    + {(parseFloat(selectedOrderDetails.final_price || 0) - parseFloat(selectedOrderDetails.total_price || 0)).toLocaleString()} so'm
+                                </span>
+                            </div>
+                         )}
                          <Separator className="my-2 bg-slate-200 dark:bg-slate-700" />
                          <div className="flex justify-between font-bold text-base pt-1"><span>Umumiy summa:</span><span>{(parseFloat(selectedOrderDetails.final_price || 0)).toLocaleString()} so'm</span></div>
                      </div>
-                     {/* **** Hisob-kitob bloki tugadi **** */}
                 </div>
             ) : (
                 <div className="text-center text-muted-foreground py-10">
@@ -3011,20 +3281,27 @@ function AdminDashboard() {
                 </div>
             )}
           </ScrollArea>
-
-          {/* **** flex-shrink-0 footer qotib qolishi uchun **** */}
-          <DialogFooter className="flex-shrink-0 pt-4 border-t flex-wrap gap-2 justify-end px-6 pb-6"> {/* Padding qaytarildi */}
-               {selectedOrderDetails && (<Button variant="outline" onClick={() => printReceipt(selectedOrderDetails)} disabled={isLoadingOrderDetails}><Printer className="mr-2 h-4 w-4" /> Chek chop etish</Button>)}
+          {/* O'ZGARTIRILDI: Modal footerdagi tugmalar */}
+          <DialogFooter className="flex-shrink-0 pt-4 border-t flex-wrap gap-2 justify-end px-6 pb-6">
+               {selectedOrderDetails && (
+                <>
+                    <Button variant="outline" onClick={() => printCustomerReceiptAPI(selectedOrderDetails)} disabled={isLoadingOrderDetails}>
+                        <Printer className="mr-2 h-4 w-4" /> Mijoz chekini chiqarish
+                    </Button>
+                    {/* Oshxona cheki faqat ma'lum statuslarda chiqariladi */}
+                    {(selectedOrderDetails.status === 'new' || selectedOrderDetails.status === 'pending' || selectedOrderDetails.status === 'preparing' || selectedOrderDetails.status === 'processing') && (
+                        <Button variant="outline" onClick={() => printKitchenReceiptAPI(selectedOrderDetails, "initial")} disabled={isLoadingOrderDetails}>
+                            <ChefHat className="mr-2 h-4 w-4" /> Oshxona chekini chiqarish
+                        </Button>
+                    )}
+                </>
+               )}
               {selectedOrderDetails && (selectedOrderDetails.status === 'pending' || selectedOrderDetails.status === 'processing' || selectedOrderDetails.status === 'ready' || selectedOrderDetails.status === 'new' || selectedOrderDetails.status === 'preparing') && (<Button variant="destructive" onClick={() => { if (confirm(`Haqiqatan ham #${selectedOrderDetails.id} raqamli buyurtmani bekor qilmoqchimisiz? Bu amalni qaytarib bo'lmaydi.`)) { handleCancelOrder(selectedOrderDetails.id); }}} disabled={isLoadingOrderDetails}><X className="mr-2 h-4 w-4" /> Buyurtmani bekor qilish</Button>)}
               <Button variant="secondary" onClick={handleModalClose}>Yopish</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* ========================================================== */}
-      {/* ------ ORDER DETAILS MODAL YAKUNI ------ */}
-      {/* ========================================================== */}
 
-       {/* Role Edit Dialog */}
       <Dialog open={showEditRoleDialog} onOpenChange={setShowEditRoleDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <form onSubmit={(e) => { e.preventDefault(); handleUpdateRole(); }}>
@@ -3049,7 +3326,6 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Category Dialog */}
       <Dialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <form onSubmit={(e) => { e.preventDefault(); handleAddCategory(); }}>
@@ -3071,7 +3347,6 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Category Dialog */}
        <Dialog open={showEditCategoryDialog} onOpenChange={setShowEditCategoryDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <form onSubmit={(e) => { e.preventDefault(); handleUpdateCategory(); }}>
@@ -3095,7 +3370,6 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Category Confirmation Dialog */}
       <Dialog open={showDeleteCategoryConfirmDialog} onOpenChange={setShowDeleteCategoryConfirmDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -3112,13 +3386,12 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-       {/* Add Table Dialog */}
        <Dialog open={showAddTableDialog} onOpenChange={setShowAddTableDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <form onSubmit={(e) => { e.preventDefault(); handleAddTable(); }}>
               <DialogHeader>
                 <DialogTitle>Yangi stol qo'shish</DialogTitle>
-                <DialogDescription>Yangi stol nomini, zonasini va holatini kiriting.</DialogDescription>
+                <DialogDescription>Yangi stol nomini, zonasini, turini va holatini kiriting.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -3128,6 +3401,15 @@ function AdminDashboard() {
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="add-table-zone" className="text-right">Zona</Label>
                   <Input id="add-table-zone" value={newTable.zone} onChange={(e) => setNewTable({ ...newTable, zone: e.target.value })} className="col-span-3" placeholder="Masalan: Asosiy zal, Yerto'la" maxLength={50}/>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="add-table-type_id" className="text-right">Stol Turi*</Label>
+                    <Select value={newTable.table_type_id} onValueChange={(value) => setNewTable({ ...newTable, table_type_id: value })} required>
+                        <SelectTrigger className="col-span-3" id="add-table-type_id"><SelectValue placeholder="Stol turini tanlang" /></SelectTrigger>
+                        <SelectContent>
+                        {validTableTypes.length > 0 ? validTableTypes.map((type) => (<SelectItem key={type.id} value={type.id.toString()}>{type.name} ({parseFloat(type.service_fee_percent).toFixed(2)}%)</SelectItem>)) : <SelectItem value="" disabled>Stol turlari topilmadi</SelectItem>}
+                        </SelectContent>
+                    </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="add-table-is_available" className="text-right">Holati (Bo'sh)</Label>
@@ -3142,7 +3424,6 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Table Dialog */}
        <Dialog open={showEditTableDialog} onOpenChange={setShowEditTableDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <form onSubmit={(e) => { e.preventDefault(); handleUpdateTable(); }}>
@@ -3160,6 +3441,15 @@ function AdminDashboard() {
                   <Label htmlFor="edit-table-zone" className="text-right">Zona</Label>
                   <Input id="edit-table-zone" value={editingTable.zone || ''} onChange={(e) => setEditingTable({ ...editingTable, zone: e.target.value })} className="col-span-3" placeholder="Masalan: Asosiy zal" maxLength={50}/>
                 </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-table-type_id" className="text-right">Stol Turi*</Label>
+                    <Select value={editingTable.table_type_id?.toString() || ""} onValueChange={(value) => setEditingTable({ ...editingTable, table_type_id: value })} required>
+                        <SelectTrigger className="col-span-3" id="edit-table-type_id"><SelectValue placeholder="Stol turini tanlang" /></SelectTrigger>
+                        <SelectContent>
+                        {validTableTypes.length > 0 ? validTableTypes.map((type) => (<SelectItem key={type.id} value={type.id.toString()}>{type.name} ({parseFloat(type.service_fee_percent).toFixed(2)}%)</SelectItem>)) : <SelectItem value="" disabled>Stol turlari topilmadi</SelectItem>}
+                        </SelectContent>
+                    </Select>
+                </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="edit-table-is_available" className="text-right">Holati (Bo'sh)</Label>
                      <div className="col-span-3 flex items-center"><Switch id="edit-table-is_available" checked={editingTable.is_available} onCheckedChange={(checked) => setEditingTable({ ...editingTable, is_available: checked })}/><span className="ml-2 text-sm text-muted-foreground">({editingTable.is_available ? "Bo'sh" : "Band"})</span></div>
@@ -3174,7 +3464,6 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Table Confirmation Dialog */}
       <Dialog open={showDeleteTableConfirmDialog} onOpenChange={setShowDeleteTableConfirmDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -3188,6 +3477,73 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showAddTableTypeDialog} onOpenChange={setShowAddTableTypeDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <form onSubmit={(e) => { e.preventDefault(); handleAddTableType(); }}>
+              <DialogHeader>
+                <DialogTitle>Yangi stol turi qo'shish</DialogTitle>
+                <DialogDescription>Yangi stol turi nomini va unga mos xizmat haqi foizini kiriting.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="add-tabletype-name" className="text-right">Nomi*</Label>
+                  <Input id="add-tabletype-name" value={newTableType.name} onChange={(e) => setNewTableType({ ...newTableType, name: e.target.value })} className="col-span-3" placeholder="Masalan: VIP Kabina" required maxLength={100}/>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="add-tabletype-fee" className="text-right">Xizmat Haqi (%)*</Label>
+                  <Input id="add-tabletype-fee" type="number" value={newTableType.service_fee_percent} onChange={(e) => setNewTableType({ ...newTableType, service_fee_percent: e.target.value })} className="col-span-3" placeholder="Masalan: 15.00" required min="0" max="100" step="0.01"/>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowAddTableTypeDialog(false)}>Bekor qilish</Button>
+                <Button type="submit" disabled={isAddingTableType}>{isAddingTableType && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Qo'shish</Button>
+              </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditTableTypeDialog} onOpenChange={setShowEditTableTypeDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <form onSubmit={(e) => { e.preventDefault(); handleUpdateTableType(); }}>
+            <DialogHeader>
+              <DialogTitle>Stol turini tahrirlash</DialogTitle>
+              <DialogDescription>Stol turi ma'lumotlarini o'zgartiring.</DialogDescription>
+            </DialogHeader>
+            {editingTableType ? (
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-tabletype-name" className="text-right">Nomi*</Label>
+                  <Input id="edit-tabletype-name" value={editingTableType.name || ''} onChange={(e) => setEditingTableType({ ...editingTableType, name: e.target.value })} className="col-span-3" placeholder="Stol turi nomi" required maxLength={100}/>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-tabletype-fee" className="text-right">Xizmat Haqi (%)*</Label>
+                  <Input id="edit-tabletype-fee" type="number" value={editingTableType.service_fee_percent || ''} onChange={(e) => setEditingTableType({ ...editingTableType, service_fee_percent: e.target.value })} className="col-span-3" placeholder="Xizmat haqi foizi" required min="0" max="100" step="0.01"/>
+                </div>
+              </div>
+            ) : (<div className="text-center py-10 text-muted-foreground">Stol turi ma'lumotlari topilmadi.</div>)}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowEditTableTypeDialog(false)}>Bekor qilish</Button>
+              <Button type="submit" disabled={isUpdatingTableType || !editingTableType}>{isUpdatingTableType && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Saqlash</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteTableTypeConfirmDialog} onOpenChange={setShowDeleteTableTypeConfirmDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Stol turini o'chirishni tasdiqlang</DialogTitle>
+            <DialogDescription>
+                Haqiqatan ham <strong>"{tableTypeToDelete?.name || 'Noma\'lum'}"</strong> (ID: {tableTypeToDelete?.id}) stol turini o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.
+                <span className="block mt-2 text-orange-600 dark:text-orange-400 font-medium">Agar bu stol turiga bog'langan stollar mavjud bo'lsa, o'chirishda xatolik yuz berishi mumkin (backend `on_delete` sozlamasiga bog'liq).</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowDeleteTableTypeConfirmDialog(false); setTableTypeToDelete(null); }}>Bekor qilish</Button>
+            <Button variant="destructive" onClick={confirmDeleteTableType} disabled={isDeletingTableType}>{isDeletingTableType && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}<Trash2 className="mr-2 h-4 w-4"/> O'chirish</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
